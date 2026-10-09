@@ -1,5 +1,12 @@
 # Cambios
 
+## 0.3.1
+
+### Arreglos
+- `POST /api/sync/push`: un estanque o lote inválido ya no tumba todo el envío con un 400. Ahora se
+  valida uno por uno, como los eventos: el malo vuelve en `rechazados` con su motivo y el resto se guarda.
+  Antes, un solo dato malo dejaba la cola del celular bloqueada para siempre.
+
 ## 0.3.0
 
 ### Cambios
