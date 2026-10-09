@@ -1,5 +1,22 @@
 # Cambios
 
+## 0.4.0
+
+### Cambios
+- Las migraciones salen del repo base-de-datos-first-offline (Andrés Camilo Muñoz) y son la única
+  fuente del esquema. Se quitan la V2 y la V3 propias del backend, que repetían lo mismo.
+- Los umbrales de agua y la curva de alimentación se leen de la base, cada uno con su fuente.
+- El nombre de un estanque y el código de un lote dentro de su estanque no se pueden repetir.
+
+### Nuevo
+- `GET /api/parametros`, `GET /api/dispositivos`, `PATCH /api/dispositivos/{id}` y `GET /api/sincronizaciones`.
+- Un dispositivo dado de baja ya no puede sincronizar (403).
+- `fecha_cierre` del lote: se pone sola al cerrarlo y se borra al reabrirlo.
+- Las alertas guardan quién las atendió (`atendida_por`) y traen `lote_id` y `disparada_por`.
+
+### Para desarrollo local
+- Si ya tenías la carpeta `data/` de una versión anterior, bórrala: el historial de migraciones cambió.
+
 ## 0.3.1
 
 ### Arreglos

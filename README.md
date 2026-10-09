@@ -16,8 +16,31 @@ src/main/java/com/lacocha/backend/
 ├── dto/           Lo que entra y sale de la API (records)
 ├── service/       Lógica: sincronización, resumen del lote y reglas (sistema experto)
 └── controller/    Rutas REST y manejo de errores
-src/main/resources/db/migration/   Tablas (Flyway)
+src/main/resources/db/
+├── migration/     Tablas (Flyway), comunes a PostgreSQL y H2
+├── motor/         Migraciones que cambian según el motor (postgresql/ y h2/)
+└── semilla/       Datos de ejemplo para la sustentación (Flyway no los aplica)
 ```
+
+### Base de datos
+
+El esquema lo diseña el repo [base-de-datos-first-offline](https://github.com/camilin0811/base-de-datos-first-offline)
+(Andrés Camilo Muñoz) y es la **única fuente** de las migraciones: este backend las copia con el mismo
+número. Para cambiar una tabla:
+
+1. Se agrega la migración nueva en el repo base-de-datos (nunca se edita una que ya corrió).
+2. Se copia aquí con el mismo nombre y se adapta el código Java si hace falta.
+
+Lo más importante que exige la base:
+
+- **Dispositivos:** cada evento apunta a un `dispositivo_id` registrado. El primer push lo registra solo.
+- **Nombres únicos:** no se repite el nombre de un estanque ni el código de un lote dentro del mismo estanque.
+- **Lote cerrado** = tiene `fecha_cierre`, y no puede ser anterior a la siembra.
+- **Umbrales y curva de alimentación** viven en tablas (`parametros_rango`, `tasas_alimentacion`,
+  `factores_temperatura`), cada número con su fuente.
+
+Para probar las migraciones en PostgreSQL de verdad (además de H2): `docker compose up -d` y
+`.\mvnw spring-boot:run -Dspring-boot.run.profiles=postgres`.
 
 ### Idioma del código
 
@@ -38,6 +61,8 @@ Los nombres del JSON se fijan con `@JsonProperty` en los DTO y las columnas con 
 | biometría | `Biometry` |
 | alerta | `Alert` |
 | reglas (sistema experto) | `Rules` |
+| dispositivo | `Device` |
+| sincronización (bitácora) | `SyncLog` |
 
 ## Correr en local
 
@@ -85,6 +110,8 @@ El celular borra de su cola todo lo que salga en cualquiera de esas listas.
 - **Estanques y lotes** sí se editan: gana el `actualizado_en` más reciente; el cambio viejo sale en `obsoletos`.
 - **Máximo** 500 eventos por envío.
 - **Fechas:** se rechazan las que están más de 1 día en el futuro o antes de 2024 (reloj sin configurar).
+- **Dispositivo dado de baja:** su push completo recibe 403.
+- **Nombre de estanque o código de lote repetido:** se rechaza solo ese, con el motivo.
 - **Alertas:** si ya hay una alerta pendiente igual (mismo estanque, variable y nivel), una lectura repetida no crea otra.
 
 `GET /api/sync/pull?desde=<servidor_en anterior>` devuelve estanques y lotes cambiados desde
@@ -108,7 +135,11 @@ para que un celular con el reloj atrasado no se pierda cambios.
 | GET | `/api/lotes/{id}/alimentaciones` | Historial de alimentación (`limite`) |
 | GET | `/api/lotes/{id}/biometrias` | Historial de biometrías (`limite`) |
 | GET | `/api/alertas` | Alertas (`pendientes`, `estanque_id`) |
-| POST | `/api/alertas/{id}/atender` | Marcar alerta como atendida (guarda `atendida_en`) |
+| POST | `/api/alertas/{id}/atender` | Marcar alerta como atendida (guarda `atendida_en` y `atendida_por`; opcional `dispositivo_id`) |
+| GET | `/api/parametros` | Umbrales de agua y curva de alimentación con su fuente |
+| GET | `/api/dispositivos` | Celulares y nodos que sincronizan, con su último envío |
+| PATCH | `/api/dispositivos/{id}` | Ponerle nombre (`descripcion`) o darlo de baja (`activo: false`) |
+| GET | `/api/sincronizaciones` | Bitácora de cada push (`dispositivo_id` opcional) |
 | GET | `/salud` | Chequeo de Render y versión desplegada (sin clave) |
 
 Todos los errores salen como `{"detalle": "..."}` con los nombres de campo igual que en el JSON.
@@ -120,8 +151,9 @@ Todos los errores salen como `{"detalle": "..."}` con los nombres de campo igual
 - **Conversión alimenticia (FCA):** kg de alimento total entre kg de biomasa ganada desde la siembra.
 - **Días de cultivo:** desde `fecha_siembra` hasta hoy (hora de Colombia).
 
-Los umbrales y la tabla de alimentación están en `service/Rules.java`. Son **valores de referencia**:
-hay que ajustarlos con el productor y citarlos de AUNAP/FAO y del fabricante del alimento.
+Los umbrales y la tabla de alimentación están en la base (ver `GET /api/parametros`). Son **valores de
+referencia**: hay que ajustarlos con el productor y citarlos de AUNAP/FAO y del fabricante del alimento.
+Cambiarlos es un `UPDATE` en la base y reiniciar el servicio, no hace falta volver a compilar.
 
 ## Desplegar en Render + Neon
 
@@ -138,7 +170,7 @@ Render no tiene Java nativo, por eso se despliega con el `Dockerfile` incluido.
 5. **Apply**. La primera compilación tarda unos minutos. Al terminar abre
    `https://<tu-servicio>.onrender.com/salud` → debe decir `{"estado":"ok","version":"…"}`.
 
-Las tablas se crean solas al arrancar (Flyway, carpeta `db/migration`).
+Las tablas se crean solas al arrancar (Flyway, carpetas `db/migration` y `db/motor/postgresql`).
 
 Nota: en el plan gratis Render apaga el servicio tras 15 min sin uso y el primer envío tarda
 ~1 minuto en despertarlo. La app debe tener un tiempo de espera largo en el primer intento.
