@@ -7,13 +7,13 @@ import org.junit.jupiter.api.Test;
 class LaCochaPropertiesTest {
 
     @Test
-    void separaLosOrigenesPorComaYQuitaEspacios() {
+    void splitsOriginsByCommaAndTrims() {
         LaCochaProperties p = new LaCochaProperties(null, null, " https://panel.onrender.com , http://localhost:5173,,");
         assertThat(p.origins()).containsExactly("https://panel.onrender.com", "http://localhost:5173");
     }
 
     @Test
-    void sinOrigenesDevuelveListaVacia() {
+    void noOriginsGivesEmptyList() {
         assertThat(new LaCochaProperties(null, null, null).origins()).isEmpty();
     }
 }

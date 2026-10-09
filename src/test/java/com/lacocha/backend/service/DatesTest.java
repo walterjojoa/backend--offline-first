@@ -7,31 +7,31 @@ import java.time.ZoneOffset;
 
 import org.junit.jupiter.api.Test;
 
-class FechasTest {
+class DatesTest {
 
     @Test
-    void fechaNormalEsValida() {
+    void normalDateIsValid() {
         assertThat(Dates.deviceDateError(OffsetDateTime.now(ZoneOffset.ofHours(-5)).minusHours(3))).isNull();
     }
 
     @Test
-    void unasHorasAdelanteSeToleran() {
+    void aFewHoursAheadAreTolerated() {
         assertThat(Dates.deviceDateError(OffsetDateTime.now().plusHours(6))).isNull();
     }
 
     @Test
-    void masDeUnDiaEnElFuturoSeRechaza() {
+    void moreThanOneDayAheadIsRejected() {
         assertThat(Dates.deviceDateError(OffsetDateTime.now().plusDays(2))).contains("futuro");
     }
 
     @Test
-    void relojEn1970SeRechaza() {
+    void clockIn1970IsRejected() {
         assertThat(Dates.deviceDateError(OffsetDateTime.of(1970, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC)))
                 .contains("antigua");
     }
 
     @Test
-    void sinFechaNoHayError() {
+    void noDateNoError() {
         assertThat(Dates.deviceDateError(null)).isNull();
     }
 }
