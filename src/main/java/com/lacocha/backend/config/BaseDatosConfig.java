@@ -28,6 +28,12 @@ public class BaseDatosConfig {
 
         HikariConfig config = new HikariConfig();
         config.setMaximumPoolSize(5);
+        // Neon se suspende tras 5 min sin uso: no dejar conexiones ociosas que lo mantengan despierto
+        // y dar tiempo suficiente para que despierte en la primera consulta
+        config.setMinimumIdle(0);
+        config.setIdleTimeout(60_000);
+        config.setMaxLifetime(240_000);
+        config.setConnectionTimeout(20_000);
 
         if (url.startsWith("postgres://") || url.startsWith("postgresql://")) {
             URI uri = URI.create(url);
