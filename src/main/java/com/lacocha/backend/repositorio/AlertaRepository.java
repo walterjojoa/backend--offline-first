@@ -11,4 +11,6 @@ public interface AlertaRepository extends JpaRepository<Alerta, UUID> {
     List<Alerta> findTop100ByAtendidaFalseOrderByMedidoEnDesc();
 
     long countByEstanqueIdAndAtendidaFalse(UUID estanqueId);
+
+    boolean existsByEstanqueIdAndVariableAndNivelAndAtendidaFalse(UUID estanqueId, String variable, String nivel);
 }

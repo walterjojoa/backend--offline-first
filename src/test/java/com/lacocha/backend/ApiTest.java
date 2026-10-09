@@ -365,4 +365,25 @@ class ApiTest {
         // 1000 alevinos x 5 g = 5 kg en 2 m3
         assertThat(llamar(get("/api/lotes/" + lote + "/resumen"), 200).get("densidad_kg_m3").asDouble()).isEqualTo(2.5);
     }
+
+    @Test
+    void lecturasRepetidasNoDuplicanLaAlertaPendiente() throws Exception {
+        String estanque = crearCatalogo()[0];
+        JsonNode r = pushEventos(
+                mapa("tipo", "lectura_agua", "id", nuevoId(), "estanque_id", estanque, "temp_c", 19.0, "registrado_en", hace(3)),
+                mapa("tipo", "lectura_agua", "id", nuevoId(), "estanque_id", estanque, "temp_c", 19.5, "registrado_en", hace(2)),
+                mapa("tipo", "lectura_agua", "id", nuevoId(), "estanque_id", estanque, "temp_c", 17.0, "registrado_en", hace(1)));
+        assertThat(r.get("aceptados")).hasSize(3);
+        // Una crítica (19 y 19.5 °C) y una advertencia (17 °C)
+        assertThat(r.get("alertas_generadas").asInt()).isEqualTo(2);
+
+        JsonNode alertas = llamar(get("/api/alertas").param("estanque_id", estanque), 200);
+        llamar(post("/api/alertas/" + alertas.get(0).get("id").asText() + "/atender"), 200);
+        llamar(post("/api/alertas/" + alertas.get(1).get("id").asText() + "/atender"), 200);
+
+        // Ya atendidas: una nueva lectura caliente vuelve a alertar
+        JsonNode otra = pushEventos(mapa("tipo", "lectura_agua", "id", nuevoId(), "estanque_id", estanque, "temp_c", 19.0,
+                "registrado_en", hace(0)));
+        assertThat(otra.get("alertas_generadas").asInt()).isEqualTo(1);
+    }
 }

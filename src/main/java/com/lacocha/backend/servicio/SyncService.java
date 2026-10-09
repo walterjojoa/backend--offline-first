@@ -186,6 +186,11 @@ public class SyncService {
 
             if (evento instanceof LecturaAguaEntrada lectura) {
                 for (Reglas.Resultado regla : Reglas.evaluarLectura(lectura.tempC(), lectura.ph(), lectura.oxigenoMgL())) {
+                    // El sensor mide cada pocos segundos: si ya hay una alerta pendiente igual, no se repite
+                    if (alertas.existsByEstanqueIdAndVariableAndNivelAndAtendidaFalse(
+                            lectura.estanqueId(), regla.variable(), regla.nivel())) {
+                        continue;
+                    }
                     Alerta alerta = new Alerta();
                     alerta.setEstanqueId(lectura.estanqueId());
                     alerta.setLecturaId(lectura.id());
