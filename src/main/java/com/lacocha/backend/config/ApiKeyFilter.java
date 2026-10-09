@@ -16,7 +16,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-/** Todas las rutas /api/** exigen el encabezado X-API-Key. /salud y /docs quedan libres. */
+/** Every /api/** route requires the X-API-Key header. /salud and /docs stay open. */
 @Component
 public class ApiKeyFilter extends OncePerRequestFilter {
 
@@ -36,32 +36,32 @@ public class ApiKeyFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        String esperada = props.apiKey();
-        if (esperada == null || esperada.isBlank()) {
-            responder(response, HttpStatus.INTERNAL_SERVER_ERROR, "API_KEY no está configurada en el servidor");
+        String expected = props.apiKey();
+        if (expected == null || expected.isBlank()) {
+            respond(response, HttpStatus.INTERNAL_SERVER_ERROR, "API_KEY no está configurada en el servidor");
             return;
         }
-        String recibida = request.getHeader("X-API-Key");
-        if (recibida == null || !MessageDigest.isEqual(
-                recibida.getBytes(StandardCharsets.UTF_8), esperada.getBytes(StandardCharsets.UTF_8))) {
-            // Sin escribir la clave recibida: solo quién intentó y a qué ruta
-            log.warn("Clave rechazada: {} {} desde {}", request.getMethod(), request.getRequestURI(), ipCliente(request));
-            responder(response, HttpStatus.UNAUTHORIZED, "Falta el encabezado X-API-Key o la clave no es válida");
+        String received = request.getHeader("X-API-Key");
+        if (received == null || !MessageDigest.isEqual(
+                received.getBytes(StandardCharsets.UTF_8), expected.getBytes(StandardCharsets.UTF_8))) {
+            // Without logging the received key: only who tried and which route
+            log.warn("Rejected API key: {} {} from {}", request.getMethod(), request.getRequestURI(), clientIp(request));
+            respond(response, HttpStatus.UNAUTHORIZED, "Falta el encabezado X-API-Key o la clave no es válida");
             return;
         }
         chain.doFilter(request, response);
     }
 
-    /** Render pone la IP real del cliente en X-Forwarded-For. */
-    private static String ipCliente(HttpServletRequest request) {
-        String reenviada = request.getHeader("X-Forwarded-For");
-        return reenviada != null && !reenviada.isBlank() ? reenviada.split(",")[0].trim() : request.getRemoteAddr();
+    /** Render puts the real client IP in X-Forwarded-For. */
+    private static String clientIp(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        return forwarded != null && !forwarded.isBlank() ? forwarded.split(",")[0].trim() : request.getRemoteAddr();
     }
 
-    private static void responder(HttpServletResponse response, HttpStatus status, String detalle) throws IOException {
+    private static void respond(HttpServletResponse response, HttpStatus status, String detail) throws IOException {
         response.setStatus(status.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");
-        response.getWriter().write("{\"detalle\":\"" + detalle + "\"}");
+        response.getWriter().write("{\"detalle\":\"" + detail + "\"}");
     }
 }

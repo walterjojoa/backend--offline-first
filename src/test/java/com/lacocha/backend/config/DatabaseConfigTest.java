@@ -5,48 +5,48 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
-import com.lacocha.backend.config.BaseDatosConfig.Conexion;
+import com.lacocha.backend.config.DatabaseConfig.ConnectionInfo;
 
-class BaseDatosConfigTest {
+class DatabaseConfigTest {
 
     @Test
     void convierteLaCadenaDeNeon() {
-        Conexion c = BaseDatosConfig.convertir(
+        ConnectionInfo c = DatabaseConfig.parse(
                 "postgresql://neondb_owner:cl%40ve@ep-algo.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require");
         assertThat(c.jdbcUrl()).isEqualTo("jdbc:postgresql://ep-algo.us-east-2.aws.neon.tech/neondb?sslmode=require");
-        assertThat(c.usuario()).isEqualTo("neondb_owner");
-        assertThat(c.clave()).isEqualTo("cl@ve");
+        assertThat(c.user()).isEqualTo("neondb_owner");
+        assertThat(c.password()).isEqualTo("cl@ve");
     }
 
     @Test
     void conservaElPuertoYPoneSslPorDefecto() {
-        Conexion c = BaseDatosConfig.convertir("postgres://yo:secreto@localhost:5433/lacocha");
+        ConnectionInfo c = DatabaseConfig.parse("postgres://yo:secreto@localhost:5433/lacocha");
         assertThat(c.jdbcUrl()).isEqualTo("jdbc:postgresql://localhost:5433/lacocha?sslmode=require");
     }
 
     @Test
     void respetaOtroSslmode() {
-        Conexion c = BaseDatosConfig.convertir("postgresql://yo:x@localhost/lacocha?sslmode=disable");
+        ConnectionInfo c = DatabaseConfig.parse("postgresql://yo:x@localhost/lacocha?sslmode=disable");
         assertThat(c.jdbcUrl()).endsWith("?sslmode=disable");
     }
 
     @Test
     void urlSinUsuario() {
-        Conexion c = BaseDatosConfig.convertir("postgresql://localhost/lacocha");
-        assertThat(c.usuario()).isNull();
+        ConnectionInfo c = DatabaseConfig.parse("postgresql://localhost/lacocha");
+        assertThat(c.user()).isNull();
         assertThat(c.jdbcUrl()).isEqualTo("jdbc:postgresql://localhost/lacocha?sslmode=require");
     }
 
     @Test
     void urlJdbcSeUsaTalCual() {
-        Conexion c = BaseDatosConfig.convertir("  jdbc:h2:mem:x  ");
+        ConnectionInfo c = DatabaseConfig.parse("  jdbc:h2:mem:x  ");
         assertThat(c.jdbcUrl()).isEqualTo("jdbc:h2:mem:x");
-        assertThat(c.usuario()).isNull();
+        assertThat(c.user()).isNull();
     }
 
     @Test
     void sinUrlFallaConMensajeClaro() {
-        assertThatThrownBy(() -> BaseDatosConfig.convertir(" "))
+        assertThatThrownBy(() -> DatabaseConfig.parse(" "))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("DATABASE_URL");
     }

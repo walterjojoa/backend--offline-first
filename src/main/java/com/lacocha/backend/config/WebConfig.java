@@ -21,24 +21,24 @@ import io.swagger.v3.oas.models.security.SecurityScheme;
 @Configuration
 public class WebConfig {
 
-    /** CORS va antes que la clave, para que el panel web reciba también los 401 con sus encabezados. */
+    /** CORS runs before the API key, so the web panel also gets the 401 responses with their headers. */
     @Bean
     public FilterRegistrationBean<CorsFilter> corsFilter(LaCochaProperties props) {
         CorsConfiguration cors = new CorsConfiguration();
-        cors.setAllowedOrigins(props.origenes());
+        cors.setAllowedOrigins(props.origins());
         cors.setAllowedMethods(List.of("GET", "POST", "PATCH", "OPTIONS"));
         cors.setAllowedHeaders(List.of("Content-Type", "X-API-Key"));
-        // El navegador guarda la respuesta del preflight una hora y no la repite en cada llamada
+        // The browser caches the preflight response for an hour instead of repeating it on every call
         cors.setMaxAge(3600L);
-        UrlBasedCorsConfigurationSource fuente = new UrlBasedCorsConfigurationSource();
-        fuente.registerCorsConfiguration("/**", cors);
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", cors);
 
-        FilterRegistrationBean<CorsFilter> registro = new FilterRegistrationBean<>(new CorsFilter(fuente));
-        registro.setOrder(Ordered.HIGHEST_PRECEDENCE);
-        return registro;
+        FilterRegistrationBean<CorsFilter> registration = new FilterRegistrationBean<>(new CorsFilter(source));
+        registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
+        return registration;
     }
 
-    /** Agrega el botón "Authorize" con X-API-Key en /docs. */
+    /** Adds the "Authorize" button with X-API-Key to /docs. */
     @Bean
     public OpenAPI openApi(ObjectProvider<BuildProperties> build) {
         BuildProperties info = build.getIfAvailable();

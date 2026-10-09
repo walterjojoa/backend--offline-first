@@ -9,11 +9,11 @@ class LaCochaPropertiesTest {
     @Test
     void separaLosOrigenesPorComaYQuitaEspacios() {
         LaCochaProperties p = new LaCochaProperties(null, null, " https://panel.onrender.com , http://localhost:5173,,");
-        assertThat(p.origenes()).containsExactly("https://panel.onrender.com", "http://localhost:5173");
+        assertThat(p.origins()).containsExactly("https://panel.onrender.com", "http://localhost:5173");
     }
 
     @Test
     void sinOrigenesDevuelveListaVacia() {
-        assertThat(new LaCochaProperties(null, null, null).origenes()).isEmpty();
+        assertThat(new LaCochaProperties(null, null, null).origins()).isEmpty();
     }
 }

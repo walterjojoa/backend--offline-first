@@ -11,7 +11,7 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 public class LaCochaApplication {
 
     public static void main(String[] args) {
-        // Mensajes de validación en español aunque el servidor de Render esté en inglés
+        // Validation messages in Spanish even if the Render server runs in English
         Locale.setDefault(Locale.forLanguageTag("es"));
         SpringApplication.run(LaCochaApplication.class, args);
     }
