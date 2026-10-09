@@ -14,12 +14,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.lacocha.backend.dto.Catalogo.EstanqueCrear;
-import com.lacocha.backend.dto.Catalogo.EstanqueEditar;
-import com.lacocha.backend.dto.Catalogo.EstanqueSalida;
-import com.lacocha.backend.dto.Catalogo.LoteCrear;
-import com.lacocha.backend.dto.Catalogo.LoteEditar;
-import com.lacocha.backend.dto.Catalogo.LoteSalida;
+import com.lacocha.backend.dto.Catalog.PondCreate;
+import com.lacocha.backend.dto.Catalog.PondUpdate;
+import com.lacocha.backend.dto.Catalog.PondResponse;
+import com.lacocha.backend.dto.Catalog.BatchCreate;
+import com.lacocha.backend.dto.Catalog.BatchUpdate;
+import com.lacocha.backend.dto.Catalog.BatchResponse;
 import com.lacocha.backend.service.CatalogoService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -39,53 +39,53 @@ public class CatalogoController {
 
     @GetMapping("/estanques")
     @Operation(summary = "Listar estanques ordenados por nombre")
-    public List<EstanqueSalida> listarEstanques() {
+    public List<PondResponse> listarEstanques() {
         return service.listarEstanques();
     }
 
     @GetMapping("/estanques/{id}")
     @Operation(summary = "Ver un estanque")
-    public EstanqueSalida obtenerEstanque(@PathVariable UUID id) {
+    public PondResponse obtenerEstanque(@PathVariable UUID id) {
         return service.obtenerEstanque(id);
     }
 
     @PostMapping("/estanques")
     @Operation(summary = "Crear un estanque desde el panel (el id es opcional)")
     @ResponseStatus(HttpStatus.CREATED)
-    public EstanqueSalida crearEstanque(@Valid @RequestBody EstanqueCrear datos) {
+    public PondResponse crearEstanque(@Valid @RequestBody PondCreate datos) {
         return service.crearEstanque(datos);
     }
 
     @PatchMapping("/estanques/{id}")
     @Operation(summary = "Editar un estanque: solo cambian los campos enviados")
-    public EstanqueSalida editarEstanque(@PathVariable UUID id, @Valid @RequestBody EstanqueEditar datos) {
+    public PondResponse editarEstanque(@PathVariable UUID id, @Valid @RequestBody PondUpdate datos) {
         return service.editarEstanque(id, datos);
     }
 
     @GetMapping("/lotes")
     @Operation(summary = "Listar lotes, con filtros opcionales por estanque y estado")
-    public List<LoteSalida> listarLotes(
-            @RequestParam(name = "estanque_id", required = false) UUID estanqueId,
-            @RequestParam(name = "estado", required = false) String estado) {
-        return service.listarLotes(estanqueId, estado);
+    public List<BatchResponse> listarLotes(
+            @RequestParam(name = "estanque_id", required = false) UUID pondId,
+            @RequestParam(name = "estado", required = false) String status) {
+        return service.listarLotes(pondId, status);
     }
 
     @GetMapping("/lotes/{id}")
     @Operation(summary = "Ver un lote")
-    public LoteSalida obtenerLote(@PathVariable UUID id) {
+    public BatchResponse obtenerLote(@PathVariable UUID id) {
         return service.obtenerLote(id);
     }
 
     @PostMapping("/lotes")
     @Operation(summary = "Crear un lote en un estanque existente")
     @ResponseStatus(HttpStatus.CREATED)
-    public LoteSalida crearLote(@Valid @RequestBody LoteCrear datos) {
+    public BatchResponse crearLote(@Valid @RequestBody BatchCreate datos) {
         return service.crearLote(datos);
     }
 
     @PatchMapping("/lotes/{id}")
     @Operation(summary = "Editar un lote (por ejemplo, cerrarlo con estado = cerrado)")
-    public LoteSalida editarLote(@PathVariable UUID id, @Valid @RequestBody LoteEditar datos) {
+    public BatchResponse editarLote(@PathVariable UUID id, @Valid @RequestBody BatchUpdate datos) {
         return service.editarLote(id, datos);
     }
 }

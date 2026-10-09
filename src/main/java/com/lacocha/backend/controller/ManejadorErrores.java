@@ -16,6 +16,8 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import com.lacocha.backend.dto.JsonNames;
+
 /** Todos los errores salen como {"detalle": "..."} para que la app los muestre igual. */
 @RestControllerAdvice
 public class ManejadorErrores {
@@ -23,7 +25,7 @@ public class ManejadorErrores {
     private static final Logger log = LoggerFactory.getLogger(ManejadorErrores.class);
 
     @ExceptionHandler(ResponseStatusException.class)
-    public ResponseEntity<Map<String, String>> estado(ResponseStatusException ex) {
+    public ResponseEntity<Map<String, String>> status(ResponseStatusException ex) {
         return ResponseEntity.status(ex.getStatusCode()).body(Map.of("detalle", String.valueOf(ex.getReason())));
     }
 
@@ -31,7 +33,7 @@ public class ManejadorErrores {
     public ResponseEntity<Map<String, String>> validacion(MethodArgumentNotValidException ex) {
         String detalle = ex.getBindingResult().getFieldErrors().stream()
                 // Mismo nombre que en el JSON (fecha_siembra, no fechaSiembra)
-                .map(e -> aSnake(e.getField()) + ": " + e.getDefaultMessage())
+                .map(e -> JsonNames.of(ex.getParameter().getParameterType(), e.getField()) + ": " + e.getDefaultMessage())
                 .sorted()
                 .collect(Collectors.joining("; "));
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("detalle", detalle));
@@ -64,9 +66,5 @@ public class ManejadorErrores {
         log.error("Error no controlado", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("detalle", "Error interno del servidor. Intenta de nuevo más tarde"));
-    }
-
-    private static String aSnake(String camel) {
-        return camel.replaceAll("([a-z0-9])([A-Z])", "$1_$2").toLowerCase();
     }
 }

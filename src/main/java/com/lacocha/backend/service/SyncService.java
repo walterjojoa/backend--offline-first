@@ -17,18 +17,19 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.MismatchedInputException;
-import com.lacocha.backend.dto.Catalogo.EstanqueSalida;
-import com.lacocha.backend.dto.Catalogo.EstanqueSync;
-import com.lacocha.backend.dto.Catalogo.LoteSalida;
-import com.lacocha.backend.dto.Catalogo.LoteSync;
-import com.lacocha.backend.dto.Eventos;
-import com.lacocha.backend.dto.Eventos.Entrada;
-import com.lacocha.backend.dto.Eventos.LecturaAguaEntrada;
-import com.lacocha.backend.dto.Sync.AlertaSalida;
-import com.lacocha.backend.dto.Sync.PullRespuesta;
-import com.lacocha.backend.dto.Sync.PushPeticion;
-import com.lacocha.backend.dto.Sync.PushRespuesta;
-import com.lacocha.backend.dto.Sync.Rechazo;
+import com.lacocha.backend.dto.Catalog.PondResponse;
+import com.lacocha.backend.dto.Catalog.PondSync;
+import com.lacocha.backend.dto.Catalog.BatchResponse;
+import com.lacocha.backend.dto.Catalog.BatchSync;
+import com.lacocha.backend.dto.Events;
+import com.lacocha.backend.dto.Events.Input;
+import com.lacocha.backend.dto.JsonNames;
+import com.lacocha.backend.dto.Events.WaterReadingInput;
+import com.lacocha.backend.dto.Sync.AlertResponse;
+import com.lacocha.backend.dto.Sync.PullResponse;
+import com.lacocha.backend.dto.Sync.PushRequest;
+import com.lacocha.backend.dto.Sync.PushResponse;
+import com.lacocha.backend.dto.Sync.Rejection;
 import com.lacocha.backend.model.Alert;
 import com.lacocha.backend.model.Pond;
 import com.lacocha.backend.model.Event;
@@ -55,17 +56,17 @@ public class SyncService {
     private static final Logger log = LoggerFactory.getLogger(SyncService.class);
 
     private final EntityManager em;
-    private final PondRepository estanques;
-    private final BatchRepository lotes;
+    private final PondRepository ponds;
+    private final BatchRepository batches;
     private final AlertRepository alertas;
     private final ObjectMapper mapper;
     private final Validator validator;
 
-    public SyncService(EntityManager em, PondRepository estanques, BatchRepository lotes,
+    public SyncService(EntityManager em, PondRepository ponds, BatchRepository batches,
             AlertRepository alertas, ObjectMapper mapper, Validator validator) {
         this.em = em;
-        this.estanques = estanques;
-        this.lotes = lotes;
+        this.ponds = ponds;
+        this.batches = batches;
         this.alertas = alertas;
         this.mapper = mapper;
         this.validator = validator;
@@ -73,186 +74,186 @@ public class SyncService {
 
     /** Resultado que se va llenando durante el push. */
     private static final class Resultado {
-        final List<UUID> aceptados = new ArrayList<>();
-        final List<UUID> duplicados = new ArrayList<>();
-        final List<UUID> obsoletos = new ArrayList<>();
-        final List<Rechazo> rechazados = new ArrayList<>();
-        int alertasGeneradas = 0;
+        final List<UUID> accepted = new ArrayList<>();
+        final List<UUID> duplicates = new ArrayList<>();
+        final List<UUID> stale = new ArrayList<>();
+        final List<Rejection> rejected = new ArrayList<>();
+        int alertsCreated = 0;
     }
 
     private static class EventoInvalido extends Exception {
-        EventoInvalido(String mensaje) {
-            super(mensaje);
+        EventoInvalido(String message) {
+            super(message);
         }
     }
 
     @Transactional
-    public PushRespuesta push(PushPeticion peticion) {
-        Instant servidorEn = ServerClock.now();
+    public PushResponse push(PushRequest peticion) {
+        Instant serverTime = ServerClock.now();
         Resultado r = new Resultado();
 
-        for (EstanqueSync e : lista(peticion.estanques())) {
-            String error = Fechas.errorFechaDispositivo(e.actualizadoEn());
+        for (PondSync e : lista(peticion.ponds())) {
+            String error = Fechas.errorFechaDispositivo(e.updatedAt());
             if (error != null) {
-                r.rechazados.add(new Rechazo(e.id().toString(), "actualizado_en: " + error));
+                r.rejected.add(new Rejection(e.id().toString(), "actualizado_en: " + error));
                 continue;
             }
-            Pond actual = estanques.findById(e.id()).orElse(null);
+            Pond actual = ponds.findById(e.id()).orElse(null);
             boolean nuevo = actual == null;
             if (nuevo) {
                 actual = new Pond();
                 actual.setId(e.id());
-            } else if (!e.actualizadoEn().toInstant().isAfter(actual.getUpdatedAt())) {
-                r.obsoletos.add(e.id());
+            } else if (!e.updatedAt().toInstant().isAfter(actual.getUpdatedAt())) {
+                r.stale.add(e.id());
                 continue;
             }
-            actual.setName(e.nombre());
-            actual.setType(e.tipo() != null ? e.tipo() : "estanque");
-            actual.setVolumeM3(e.volumenM3());
-            actual.setActive(e.activo() == null || e.activo());
-            actual.setUpdatedAt(e.actualizadoEn().toInstant());
+            actual.setName(e.name());
+            actual.setType(e.type() != null ? e.type() : "estanque");
+            actual.setVolumeM3(e.volumeM3());
+            actual.setActive(e.active() == null || e.active());
+            actual.setUpdatedAt(e.updatedAt().toInstant());
             if (nuevo) {
                 em.persist(actual);
             }
-            r.aceptados.add(e.id());
+            r.accepted.add(e.id());
         }
         em.flush();
 
-        for (LoteSync l : lista(peticion.lotes())) {
-            String error = Fechas.errorFechaDispositivo(l.actualizadoEn());
+        for (BatchSync l : lista(peticion.batches())) {
+            String error = Fechas.errorFechaDispositivo(l.updatedAt());
             if (error != null) {
-                r.rechazados.add(new Rechazo(l.id().toString(), "actualizado_en: " + error));
+                r.rejected.add(new Rejection(l.id().toString(), "actualizado_en: " + error));
                 continue;
             }
-            if (!estanques.existsById(l.estanqueId())) {
-                r.rechazados.add(new Rechazo(l.id().toString(), "estanque_id: el estanque no existe"));
+            if (!ponds.existsById(l.pondId())) {
+                r.rejected.add(new Rejection(l.id().toString(), "estanque_id: el estanque no existe"));
                 continue;
             }
-            Batch actual = lotes.findById(l.id()).orElse(null);
+            Batch actual = batches.findById(l.id()).orElse(null);
             boolean nuevo = actual == null;
             if (nuevo) {
                 actual = new Batch();
                 actual.setId(l.id());
-            } else if (!l.actualizadoEn().toInstant().isAfter(actual.getUpdatedAt())) {
-                r.obsoletos.add(l.id());
+            } else if (!l.updatedAt().toInstant().isAfter(actual.getUpdatedAt())) {
+                r.stale.add(l.id());
                 continue;
             }
-            actual.setPondId(l.estanqueId());
-            actual.setCode(l.codigo());
-            actual.setStockingDate(l.fechaSiembra());
-            actual.setInitialQuantity(l.cantidadInicial());
-            actual.setInitialWeightG(l.pesoInicialG());
-            actual.setStatus(l.estado() != null ? l.estado() : "activo");
-            actual.setUpdatedAt(l.actualizadoEn().toInstant());
+            actual.setPondId(l.pondId());
+            actual.setCode(l.code());
+            actual.setStockingDate(l.stockingDate());
+            actual.setInitialQuantity(l.initialQuantity());
+            actual.setInitialWeightG(l.initialWeightG());
+            actual.setStatus(l.status() != null ? l.status() : "activo");
+            actual.setUpdatedAt(l.updatedAt().toInstant());
             if (nuevo) {
                 em.persist(actual);
             }
-            r.aceptados.add(l.id());
+            r.accepted.add(l.id());
         }
         em.flush();
 
         Set<UUID> padresConocidos = new HashSet<>();
-        for (JsonNode crudo : lista(peticion.eventos())) {
-            Entrada evento;
+        for (JsonNode crudo : lista(peticion.events())) {
+            Input evento;
             try {
                 evento = leerEvento(crudo);
             } catch (EventoInvalido ex) {
-                r.rechazados.add(new Rechazo(idCrudo(crudo), ex.getMessage()));
+                r.rejected.add(new Rejection(idCrudo(crudo), ex.getMessage()));
                 continue;
             }
 
-            if (!padresConocidos.contains(evento.padreId())) {
-                Class<?> clasePadre = evento.padreEsEstanque() ? Pond.class : Batch.class;
-                if (em.find(clasePadre, evento.padreId()) == null) {
-                    String campo = evento.padreEsEstanque() ? "estanque_id" : "lote_id";
-                    r.rechazados.add(new Rechazo(evento.id().toString(), campo + ": no existe"));
+            if (!padresConocidos.contains(evento.parentId())) {
+                Class<?> clasePadre = evento.parentIsPond() ? Pond.class : Batch.class;
+                if (em.find(clasePadre, evento.parentId()) == null) {
+                    String campo = evento.parentIsPond() ? "estanque_id" : "lote_id";
+                    r.rejected.add(new Rejection(evento.id().toString(), campo + ": no existe"));
                     continue;
                 }
-                padresConocidos.add(evento.padreId());
+                padresConocidos.add(evento.parentId());
             }
 
-            Event entidad = evento.aEntidad();
+            Event entidad = evento.toEntity();
             if (em.find(entidad.getClass(), evento.id()) != null) {
-                r.duplicados.add(evento.id());
+                r.duplicates.add(evento.id());
                 continue;
             }
             entidad.setId(evento.id());
-            entidad.setDeviceId(peticion.dispositivoId());
-            entidad.setSource(evento.origen() != null ? evento.origen() : "manual");
-            entidad.setRecordedAt(evento.registradoEn().toInstant());
-            entidad.setReceivedAt(servidorEn);
+            entidad.setDeviceId(peticion.deviceId());
+            entidad.setSource(evento.source() != null ? evento.source() : "manual");
+            entidad.setRecordedAt(evento.recordedAt().toInstant());
+            entidad.setReceivedAt(serverTime);
             em.persist(entidad);
-            r.aceptados.add(evento.id());
+            r.accepted.add(evento.id());
 
-            if (evento instanceof LecturaAguaEntrada lectura) {
-                for (Reglas.Resultado regla : Reglas.evaluarLectura(lectura.tempC(), lectura.ph(), lectura.oxigenoMgL())) {
+            if (evento instanceof WaterReadingInput lectura) {
+                for (Reglas.Resultado regla : Reglas.evaluarLectura(lectura.tempC(), lectura.ph(), lectura.oxygenMgL())) {
                     // El sensor mide cada pocos segundos: si ya hay una alerta pendiente igual, no se repite
                     if (alertas.existsByPondIdAndVariableAndLevelAndAttendedFalse(
-                            lectura.estanqueId(), regla.variable(), regla.nivel())) {
+                            lectura.pondId(), regla.variable(), regla.level())) {
                         continue;
                     }
                     Alert alerta = new Alert();
-                    alerta.setPondId(lectura.estanqueId());
+                    alerta.setPondId(lectura.pondId());
                     alerta.setReadingId(lectura.id());
                     alerta.setVariable(regla.variable());
-                    alerta.setValue(regla.valor());
-                    alerta.setLevel(regla.nivel());
-                    alerta.setMessage(regla.mensaje());
-                    alerta.setMeasuredAt(lectura.registradoEn().toInstant());
+                    alerta.setValue(regla.value());
+                    alerta.setLevel(regla.level());
+                    alerta.setMessage(regla.message());
+                    alerta.setMeasuredAt(lectura.recordedAt().toInstant());
                     em.persist(alerta);
-                    r.alertasGeneradas++;
+                    r.alertsCreated++;
                 }
             }
         }
 
         log.info("push de {}: {} aceptados, {} duplicados, {} obsoletos, {} rechazados, {} alertas",
-                peticion.dispositivoId(), r.aceptados.size(), r.duplicados.size(), r.obsoletos.size(),
-                r.rechazados.size(), r.alertasGeneradas);
-        return new PushRespuesta(r.aceptados, r.duplicados, r.obsoletos, r.rechazados, r.alertasGeneradas, servidorEn);
+                peticion.deviceId(), r.accepted.size(), r.duplicates.size(), r.stale.size(),
+                r.rejected.size(), r.alertsCreated);
+        return new PushResponse(r.accepted, r.duplicates, r.stale, r.rejected, r.alertsCreated, serverTime);
     }
 
     /** desde es el servidor_en que devolvió el pull anterior. Sin él, baja todo. */
     @Transactional(readOnly = true)
-    public PullRespuesta pull(Instant desde) {
-        Instant servidorEn = ServerClock.now();
-        List<Pond> listaEstanques = desde == null ? estanques.findAll() : estanques.findByServerTimeAfter(desde);
-        List<Batch> listaLotes = desde == null ? lotes.findAll() : lotes.findByServerTimeAfter(desde);
-        return new PullRespuesta(
-                listaEstanques.stream().map(EstanqueSalida::de).toList(),
-                listaLotes.stream().map(LoteSalida::de).toList(),
-                alertas.findTop100ByAttendedFalseOrderByMeasuredAtDesc().stream().map(AlertaSalida::de).toList(),
-                servidorEn);
+    public PullResponse pull(Instant desde) {
+        Instant serverTime = ServerClock.now();
+        List<Pond> listaEstanques = desde == null ? ponds.findAll() : ponds.findByServerTimeAfter(desde);
+        List<Batch> listaLotes = desde == null ? batches.findAll() : batches.findByServerTimeAfter(desde);
+        return new PullResponse(
+                listaEstanques.stream().map(PondResponse::from).toList(),
+                listaLotes.stream().map(BatchResponse::from).toList(),
+                alertas.findTop100ByAttendedFalseOrderByMeasuredAtDesc().stream().map(AlertResponse::from).toList(),
+                serverTime);
     }
 
-    private Entrada leerEvento(JsonNode crudo) throws EventoInvalido {
+    private Input leerEvento(JsonNode crudo) throws EventoInvalido {
         if (crudo == null || !crudo.isObject()) {
             throw new EventoInvalido("el evento debe ser un objeto JSON");
         }
-        Class<? extends Entrada> clase = Eventos.TIPOS.get(crudo.path("tipo").asText(""));
+        Class<? extends Input> clase = Events.TYPES.get(crudo.path("tipo").asText(""));
         if (clase == null) {
-            throw new EventoInvalido("tipo: debe ser uno de " + String.join(", ", Eventos.TIPOS.keySet()));
+            throw new EventoInvalido("tipo: debe ser uno de " + String.join(", ", Events.TYPES.keySet()));
         }
 
-        Entrada evento;
+        Input evento;
         try {
             evento = mapper.treeToValue(crudo, clase);
         } catch (JsonProcessingException ex) {
             throw new EventoInvalido(campoConError(ex) + ": formato no válido");
         }
 
-        Set<ConstraintViolation<Entrada>> violaciones = validator.validate(evento);
+        Set<ConstraintViolation<Input>> violaciones = validator.validate(evento);
         if (!violaciones.isEmpty()) {
-            ConstraintViolation<Entrada> v = violaciones.stream()
+            ConstraintViolation<Input> v = violaciones.stream()
                     .min(Comparator.comparing(x -> x.getPropertyPath().toString()))
                     .get();
-            throw new EventoInvalido(aSnake(v.getPropertyPath().toString()) + ": " + v.getMessage());
+            throw new EventoInvalido(JsonNames.of(evento.getClass(), v.getPropertyPath().toString()) + ": " + v.getMessage());
         }
 
-        String error = Fechas.errorFechaDispositivo(evento.registradoEn());
+        String error = Fechas.errorFechaDispositivo(evento.recordedAt());
         if (error != null) {
             throw new EventoInvalido("registrado_en: " + error);
         }
-        error = evento.errorExtra();
+        error = evento.extraError();
         if (error != null) {
             throw new EventoInvalido(error);
         }
@@ -269,9 +270,6 @@ public class SyncService {
         return "evento";
     }
 
-    private static String aSnake(String camel) {
-        return camel.replaceAll("([a-z0-9])([A-Z])", "$1_$2").toLowerCase();
-    }
 
     private static String idCrudo(JsonNode crudo) {
         return crudo != null && crudo.hasNonNull("id") ? crudo.get("id").asText() : null;

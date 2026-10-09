@@ -17,11 +17,11 @@ final class Fechas {
     static final Instant FECHA_MINIMA = Instant.parse("2024-01-01T00:00:00Z");
 
     /** Un celular con el reloj adelantado ensuciaría el historial y ganaría siempre en los cambios del catálogo. */
-    static String errorFechaDispositivo(OffsetDateTime fecha) {
-        if (fecha == null) {
+    static String errorFechaDispositivo(OffsetDateTime date) {
+        if (date == null) {
             return null;
         }
-        Instant instante = fecha.toInstant();
+        Instant instante = date.toInstant();
         if (instante.isAfter(Instant.now().plus(Duration.ofDays(1)))) {
             return "la fecha está en el futuro: revisa el reloj del celular";
         }

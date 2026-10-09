@@ -10,9 +10,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.lacocha.backend.dto.Sync.PullRespuesta;
-import com.lacocha.backend.dto.Sync.PushPeticion;
-import com.lacocha.backend.dto.Sync.PushRespuesta;
+import com.lacocha.backend.dto.Sync.PullResponse;
+import com.lacocha.backend.dto.Sync.PushRequest;
+import com.lacocha.backend.dto.Sync.PushResponse;
 import com.lacocha.backend.service.SyncService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -32,13 +32,13 @@ public class SyncController {
 
     @PostMapping("/push")
     @Operation(summary = "El celular sube su cola de pendientes (idempotente)")
-    public PushRespuesta push(@Valid @RequestBody PushPeticion peticion) {
+    public PushResponse push(@Valid @RequestBody PushRequest peticion) {
         return service.push(peticion);
     }
 
     @GetMapping("/pull")
     @Operation(summary = "El celular baja cambios del catálogo y alertas pendientes")
-    public PullRespuesta pull(
+    public PullResponse pull(
             @RequestParam(name = "desde", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime desde) {
         return service.pull(desde != null ? desde.toInstant() : null);
     }

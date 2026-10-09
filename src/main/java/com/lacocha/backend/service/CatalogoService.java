@@ -8,12 +8,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.lacocha.backend.dto.Catalogo.EstanqueCrear;
-import com.lacocha.backend.dto.Catalogo.EstanqueEditar;
-import com.lacocha.backend.dto.Catalogo.EstanqueSalida;
-import com.lacocha.backend.dto.Catalogo.LoteCrear;
-import com.lacocha.backend.dto.Catalogo.LoteEditar;
-import com.lacocha.backend.dto.Catalogo.LoteSalida;
+import com.lacocha.backend.dto.Catalog.PondCreate;
+import com.lacocha.backend.dto.Catalog.PondUpdate;
+import com.lacocha.backend.dto.Catalog.PondResponse;
+import com.lacocha.backend.dto.Catalog.BatchCreate;
+import com.lacocha.backend.dto.Catalog.BatchUpdate;
+import com.lacocha.backend.dto.Catalog.BatchResponse;
 import com.lacocha.backend.model.Pond;
 import com.lacocha.backend.model.Batch;
 import com.lacocha.backend.model.ServerClock;
@@ -27,110 +27,110 @@ import jakarta.persistence.TypedQuery;
 public class CatalogoService {
 
     private final EntityManager em;
-    private final PondRepository estanques;
-    private final BatchRepository lotes;
+    private final PondRepository ponds;
+    private final BatchRepository batches;
 
-    public CatalogoService(EntityManager em, PondRepository estanques, BatchRepository lotes) {
+    public CatalogoService(EntityManager em, PondRepository ponds, BatchRepository batches) {
         this.em = em;
-        this.estanques = estanques;
-        this.lotes = lotes;
+        this.ponds = ponds;
+        this.batches = batches;
     }
 
     @Transactional(readOnly = true)
-    public List<EstanqueSalida> listarEstanques() {
-        return estanques.findAllByOrderByNameAsc().stream().map(EstanqueSalida::de).toList();
+    public List<PondResponse> listarEstanques() {
+        return ponds.findAllByOrderByNameAsc().stream().map(PondResponse::from).toList();
     }
 
     @Transactional(readOnly = true)
-    public EstanqueSalida obtenerEstanque(UUID id) {
-        return EstanqueSalida.de(estanques.findById(id).orElseThrow(() -> noExiste("El estanque")));
+    public PondResponse obtenerEstanque(UUID id) {
+        return PondResponse.from(ponds.findById(id).orElseThrow(() -> noExiste("El estanque")));
     }
 
     @Transactional
-    public EstanqueSalida crearEstanque(EstanqueCrear datos) {
-        if (datos.id() != null && estanques.existsById(datos.id())) {
+    public PondResponse crearEstanque(PondCreate datos) {
+        if (datos.id() != null && ponds.existsById(datos.id())) {
             throw yaExiste("El estanque");
         }
         Pond e = new Pond();
         e.setId(datos.id() != null ? datos.id() : UUID.randomUUID());
-        e.setName(datos.nombre());
-        if (datos.tipo() != null) {
-            e.setType(datos.tipo());
+        e.setName(datos.name());
+        if (datos.type() != null) {
+            e.setType(datos.type());
         }
-        e.setVolumeM3(datos.volumenM3());
+        e.setVolumeM3(datos.volumeM3());
         e.setUpdatedAt(ServerClock.now());
         em.persist(e);
-        return EstanqueSalida.de(e);
+        return PondResponse.from(e);
     }
 
     @Transactional
-    public EstanqueSalida editarEstanque(UUID id, EstanqueEditar datos) {
-        Pond e = estanques.findById(id).orElseThrow(() -> noExiste("El estanque"));
-        if (datos.nombre() != null) e.setName(datos.nombre());
-        if (datos.tipo() != null) e.setType(datos.tipo());
-        if (datos.volumenM3() != null) e.setVolumeM3(datos.volumenM3());
-        if (datos.activo() != null) e.setActive(datos.activo());
+    public PondResponse editarEstanque(UUID id, PondUpdate datos) {
+        Pond e = ponds.findById(id).orElseThrow(() -> noExiste("El estanque"));
+        if (datos.name() != null) e.setName(datos.name());
+        if (datos.type() != null) e.setType(datos.type());
+        if (datos.volumeM3() != null) e.setVolumeM3(datos.volumeM3());
+        if (datos.active() != null) e.setActive(datos.active());
         e.setUpdatedAt(ServerClock.now());
-        estanques.flush();
-        return EstanqueSalida.de(e);
+        ponds.flush();
+        return PondResponse.from(e);
     }
 
     @Transactional(readOnly = true)
-    public List<LoteSalida> listarLotes(UUID estanqueId, String estado) {
-        if (estado != null && !estado.equals("activo") && !estado.equals("cerrado")) {
+    public List<BatchResponse> listarLotes(UUID pondId, String status) {
+        if (status != null && !status.equals("activo") && !status.equals("cerrado")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "estado: debe ser activo o cerrado");
         }
         // Filtra en la base de datos en vez de traer todos los lotes a memoria
         StringBuilder jpql = new StringBuilder("select l from Batch l where 1 = 1");
-        if (estanqueId != null) jpql.append(" and l.pondId = :estanque");
-        if (estado != null) jpql.append(" and l.status = :estado");
+        if (pondId != null) jpql.append(" and l.pondId = :estanque");
+        if (status != null) jpql.append(" and l.status = :estado");
         jpql.append(" order by l.code");
 
         TypedQuery<Batch> consulta = em.createQuery(jpql.toString(), Batch.class);
-        if (estanqueId != null) consulta.setParameter("estanque", estanqueId);
-        if (estado != null) consulta.setParameter("estado", estado);
-        return consulta.getResultList().stream().map(LoteSalida::de).toList();
+        if (pondId != null) consulta.setParameter("estanque", pondId);
+        if (status != null) consulta.setParameter("estado", status);
+        return consulta.getResultList().stream().map(BatchResponse::from).toList();
     }
 
     @Transactional(readOnly = true)
-    public LoteSalida obtenerLote(UUID id) {
-        return LoteSalida.de(lotes.findById(id).orElseThrow(() -> noExiste("El lote")));
+    public BatchResponse obtenerLote(UUID id) {
+        return BatchResponse.from(batches.findById(id).orElseThrow(() -> noExiste("El lote")));
     }
 
     @Transactional
-    public LoteSalida crearLote(LoteCrear datos) {
-        if (!estanques.existsById(datos.estanqueId())) {
+    public BatchResponse crearLote(BatchCreate datos) {
+        if (!ponds.existsById(datos.pondId())) {
             throw noExiste("El estanque");
         }
-        if (datos.id() != null && lotes.existsById(datos.id())) {
+        if (datos.id() != null && batches.existsById(datos.id())) {
             throw yaExiste("El lote");
         }
         Batch l = new Batch();
         l.setId(datos.id() != null ? datos.id() : UUID.randomUUID());
-        l.setPondId(datos.estanqueId());
-        l.setCode(datos.codigo());
-        l.setStockingDate(datos.fechaSiembra());
-        l.setInitialQuantity(datos.cantidadInicial());
-        l.setInitialWeightG(datos.pesoInicialG());
-        if (datos.estado() != null) {
-            l.setStatus(datos.estado());
+        l.setPondId(datos.pondId());
+        l.setCode(datos.code());
+        l.setStockingDate(datos.stockingDate());
+        l.setInitialQuantity(datos.initialQuantity());
+        l.setInitialWeightG(datos.initialWeightG());
+        if (datos.status() != null) {
+            l.setStatus(datos.status());
         }
         l.setUpdatedAt(ServerClock.now());
         em.persist(l);
-        return LoteSalida.de(l);
+        return BatchResponse.from(l);
     }
 
     @Transactional
-    public LoteSalida editarLote(UUID id, LoteEditar datos) {
-        Batch l = lotes.findById(id).orElseThrow(() -> noExiste("El lote"));
-        if (datos.codigo() != null) l.setCode(datos.codigo());
-        if (datos.fechaSiembra() != null) l.setStockingDate(datos.fechaSiembra());
-        if (datos.cantidadInicial() != null) l.setInitialQuantity(datos.cantidadInicial());
-        if (datos.pesoInicialG() != null) l.setInitialWeightG(datos.pesoInicialG());
-        if (datos.estado() != null) l.setStatus(datos.estado());
+    public BatchResponse editarLote(UUID id, BatchUpdate datos) {
+        Batch l = batches.findById(id).orElseThrow(() -> noExiste("El lote"));
+        if (datos.code() != null) l.setCode(datos.code());
+        if (datos.stockingDate() != null) l.setStockingDate(datos.stockingDate());
+        if (datos.initialQuantity() != null) l.setInitialQuantity(datos.initialQuantity());
+        if (datos.initialWeightG() != null) l.setInitialWeightG(datos.initialWeightG());
+        if (datos.status() != null) l.setStatus(datos.status());
         l.setUpdatedAt(ServerClock.now());
-        lotes.flush();
-        return LoteSalida.de(l);
+        batches.flush();
+        return BatchResponse.from(l);
     }
 
     static ResponseStatusException yaExiste(String que) {

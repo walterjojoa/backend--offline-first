@@ -58,8 +58,8 @@ public class ApiKeyFilter extends OncePerRequestFilter {
         return reenviada != null && !reenviada.isBlank() ? reenviada.split(",")[0].trim() : request.getRemoteAddr();
     }
 
-    private static void responder(HttpServletResponse response, HttpStatus estado, String detalle) throws IOException {
-        response.setStatus(estado.value());
+    private static void responder(HttpServletResponse response, HttpStatus status, String detalle) throws IOException {
+        response.setStatus(status.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");
         response.getWriter().write("{\"detalle\":\"" + detalle + "\"}");

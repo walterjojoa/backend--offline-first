@@ -17,14 +17,14 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.lacocha.backend.dto.Consultas.ConteoSalida;
-import com.lacocha.backend.dto.Consultas.BiometriaSalida;
-import com.lacocha.backend.dto.Consultas.AlimentacionSalida;
-import com.lacocha.backend.dto.Consultas.MortalidadSalida;
-import com.lacocha.backend.dto.Consultas.LecturaAguaSalida;
-import com.lacocha.backend.dto.Consultas.LecturasDia;
-import com.lacocha.backend.dto.Consultas.ResumenLote;
-import com.lacocha.backend.dto.Sync.AlertaSalida;
+import com.lacocha.backend.dto.Queries.FryCountResponse;
+import com.lacocha.backend.dto.Queries.BiometryResponse;
+import com.lacocha.backend.dto.Queries.FeedingResponse;
+import com.lacocha.backend.dto.Queries.MortalityResponse;
+import com.lacocha.backend.dto.Queries.WaterReadingResponse;
+import com.lacocha.backend.dto.Queries.DailyReadings;
+import com.lacocha.backend.dto.Queries.BatchSummary;
+import com.lacocha.backend.dto.Sync.AlertResponse;
 import com.lacocha.backend.model.Alert;
 import com.lacocha.backend.model.Biometry;
 import com.lacocha.backend.model.FryCount;
@@ -51,31 +51,31 @@ import jakarta.persistence.TypedQuery;
 public class ConsultaService {
 
     private final EntityManager em;
-    private final PondRepository estanques;
-    private final BatchRepository lotes;
+    private final PondRepository ponds;
+    private final BatchRepository batches;
     private final FryCountRepository conteos;
     private final MortalityRepository mortalidades;
     private final BiometryRepository biometrias;
-    private final WaterReadingRepository lecturas;
+    private final WaterReadingRepository readings;
     private final FeedingRepository alimentaciones;
     private final AlertRepository alertas;
 
-    public ConsultaService(EntityManager em, PondRepository estanques, BatchRepository lotes,
+    public ConsultaService(EntityManager em, PondRepository ponds, BatchRepository batches,
             FryCountRepository conteos, MortalityRepository mortalidades, BiometryRepository biometrias,
-            WaterReadingRepository lecturas, FeedingRepository alimentaciones, AlertRepository alertas) {
+            WaterReadingRepository readings, FeedingRepository alimentaciones, AlertRepository alertas) {
         this.em = em;
-        this.estanques = estanques;
-        this.lotes = lotes;
+        this.ponds = ponds;
+        this.batches = batches;
         this.conteos = conteos;
         this.mortalidades = mortalidades;
         this.biometrias = biometrias;
-        this.lecturas = lecturas;
+        this.readings = readings;
         this.alimentaciones = alimentaciones;
         this.alertas = alertas;
     }
 
-    public List<LecturaAguaSalida> lecturasEstanque(UUID estanqueId, Instant desde, Instant hasta, int limite) {
-        if (!estanques.existsById(estanqueId)) {
+    public List<WaterReadingResponse> lecturasEstanque(UUID pondId, Instant desde, Instant hasta, int limite) {
+        if (!ponds.existsById(pondId)) {
             throw CatalogoService.noExiste("El estanque");
         }
         StringBuilder jpql = new StringBuilder("select l from WaterReading l where l.pondId = :estanque");
@@ -84,16 +84,16 @@ public class ConsultaService {
         jpql.append(" order by l.recordedAt desc");
 
         TypedQuery<WaterReading> consulta = em.createQuery(jpql.toString(), WaterReading.class)
-                .setParameter("estanque", estanqueId)
+                .setParameter("estanque", pondId)
                 .setMaxResults(Math.max(1, Math.min(limite, 5000)));
         if (desde != null) consulta.setParameter("desde", desde);
         if (hasta != null) consulta.setParameter("hasta", hasta);
-        return consulta.getResultList().stream().map(LecturaAguaSalida::de).toList();
+        return consulta.getResultList().stream().map(WaterReadingResponse::from).toList();
     }
 
     /** Mínimo, máximo y promedio de temperatura y pH por día (hora de Colombia) de los últimos días. */
-    public List<LecturasDia> lecturasPorDia(UUID estanqueId, int dias) {
-        if (!estanques.existsById(estanqueId)) {
+    public List<DailyReadings> lecturasPorDia(UUID pondId, int dias) {
+        if (!ponds.existsById(pondId)) {
             throw CatalogoService.noExiste("El estanque");
         }
         dias = Math.max(1, Math.min(dias, 90));
@@ -102,7 +102,7 @@ public class ConsultaService {
         List<WaterReading> lista = em.createQuery(
                         "select l from WaterReading l where l.pondId = :estanque and l.recordedAt >= :desde",
                         WaterReading.class)
-                .setParameter("estanque", estanqueId)
+                .setParameter("estanque", pondId)
                 .setParameter("desde", desde)
                 .getResultList();
 
@@ -112,7 +112,7 @@ public class ConsultaService {
         return porDia.entrySet().stream().map(dia -> {
             DoubleSummaryStatistics temp = estadisticas(dia.getValue(), WaterReading::getTempC);
             DoubleSummaryStatistics ph = estadisticas(dia.getValue(), WaterReading::getPh);
-            return new LecturasDia(dia.getKey(), dia.getValue().size(),
+            return new DailyReadings(dia.getKey(), dia.getValue().size(),
                     minimo(temp), maximo(temp), promedio(temp, 2),
                     minimo(ph), maximo(ph), promedio(ph, 2));
         }).toList();
@@ -134,139 +134,139 @@ public class ConsultaService {
         return e.getCount() > 0 ? Reglas.redondear(e.getAverage(), decimales) : null;
     }
 
-    public List<ConteoSalida> conteosLote(UUID loteId, int limite) {
-        return eventosLote(FryCount.class, loteId, limite).stream().map(ConteoSalida::de).toList();
+    public List<FryCountResponse> conteosLote(UUID batchId, int limite) {
+        return eventosLote(FryCount.class, batchId, limite).stream().map(FryCountResponse::from).toList();
     }
 
-    public List<MortalidadSalida> mortalidadesLote(UUID loteId, int limite) {
-        return eventosLote(Mortality.class, loteId, limite).stream().map(MortalidadSalida::de).toList();
+    public List<MortalityResponse> mortalidadesLote(UUID batchId, int limite) {
+        return eventosLote(Mortality.class, batchId, limite).stream().map(MortalityResponse::from).toList();
     }
 
-    public List<AlimentacionSalida> alimentacionesLote(UUID loteId, int limite) {
-        return eventosLote(Feeding.class, loteId, limite).stream().map(AlimentacionSalida::de).toList();
+    public List<FeedingResponse> alimentacionesLote(UUID batchId, int limite) {
+        return eventosLote(Feeding.class, batchId, limite).stream().map(FeedingResponse::from).toList();
     }
 
-    public List<BiometriaSalida> biometriasLote(UUID loteId, int limite) {
-        return eventosLote(Biometry.class, loteId, limite).stream().map(BiometriaSalida::de).toList();
+    public List<BiometryResponse> biometriasLote(UUID batchId, int limite) {
+        return eventosLote(Biometry.class, batchId, limite).stream().map(BiometryResponse::from).toList();
     }
 
     /** Historial de un tipo de evento del lote, del más reciente al más antiguo. */
-    private <T extends Event> List<T> eventosLote(Class<T> clase, UUID loteId, int limite) {
-        if (!lotes.existsById(loteId)) {
+    private <T extends Event> List<T> eventosLote(Class<T> clase, UUID batchId, int limite) {
+        if (!batches.existsById(batchId)) {
             throw CatalogoService.noExiste("El lote");
         }
         return em.createQuery("select e from " + clase.getSimpleName()
                         + " e where e.batchId = :lote order by e.recordedAt desc", clase)
-                .setParameter("lote", loteId)
+                .setParameter("lote", batchId)
                 .setMaxResults(Math.max(1, Math.min(limite, 1000)))
                 .getResultList();
     }
 
-    public ResumenLote resumenLote(UUID loteId) {
-        Batch lote = lotes.findById(loteId).orElseThrow(() -> CatalogoService.noExiste("El lote"));
-        List<String> notas = new ArrayList<>();
+    public BatchSummary resumenLote(UUID batchId) {
+        Batch lote = batches.findById(batchId).orElseThrow(() -> CatalogoService.noExiste("El lote"));
+        List<String> notes = new ArrayList<>();
 
-        List<FryCount> listaConteos = conteos.findByBatchIdOrderByRecordedAtAsc(loteId);
-        Integer cantidadInicial = lote.getInitialQuantity() != null ? lote.getInitialQuantity()
+        List<FryCount> listaConteos = conteos.findByBatchIdOrderByRecordedAtAsc(batchId);
+        Integer initialQuantity = lote.getInitialQuantity() != null ? lote.getInitialQuantity()
                 : (listaConteos.isEmpty() ? null : listaConteos.get(0).getTotal());
 
         // Población = último conteo menos las muertes registradas después de ese conteo
-        long mortalidadTotal = mortalidades.totalForBatch(loteId);
+        long totalMortality = mortalidades.totalForBatch(batchId);
         Integer poblacion;
         if (!listaConteos.isEmpty()) {
             FryCount ultimo = listaConteos.get(listaConteos.size() - 1);
-            long despues = mortalidades.totalForBatchAfter(loteId, ultimo.getRecordedAt());
+            long despues = mortalidades.totalForBatchAfter(batchId, ultimo.getRecordedAt());
             poblacion = (int) Math.max(ultimo.getTotal() - despues, 0);
-        } else if (cantidadInicial != null) {
-            poblacion = (int) Math.max(cantidadInicial - mortalidadTotal, 0);
+        } else if (initialQuantity != null) {
+            poblacion = (int) Math.max(initialQuantity - totalMortality, 0);
         } else {
             poblacion = null;
-            notas.add("Sin conteo ni cantidad inicial: no se puede estimar la población.");
+            notes.add("Sin conteo ni cantidad inicial: no se puede estimar la población.");
         }
 
-        Double supervivencia = poblacion != null && cantidadInicial != null && cantidadInicial > 0
-                ? Reglas.redondear(poblacion * 100.0 / cantidadInicial, 1)
+        Double supervivencia = poblacion != null && initialQuantity != null && initialQuantity > 0
+                ? Reglas.redondear(poblacion * 100.0 / initialQuantity, 1)
                 : null;
 
-        Double peso = biometrias.findFirstByBatchIdOrderByRecordedAtDesc(loteId)
+        Double peso = biometrias.findFirstByBatchIdOrderByRecordedAtDesc(batchId)
                 .map(Biometry::getAvgWeightG)
                 .orElse(lote.getInitialWeightG());
         if (peso == null) {
-            notas.add("Falta el peso promedio: registra una biometría para calcular biomasa y ración.");
+            notes.add("Falta el peso promedio: registra una biometría para calcular biomasa y ración.");
         }
         Double biomasa = poblacion != null && peso != null ? Reglas.redondear(poblacion * peso / 1000, 3) : null;
 
         // Densidad de siembra: sirve para saber si el estanque está sobrecargado
-        Double volumen = estanques.findById(lote.getPondId()).map(e -> e.getVolumeM3()).orElse(null);
+        Double volumen = ponds.findById(lote.getPondId()).map(e -> e.getVolumeM3()).orElse(null);
         Double densidad = biomasa != null && volumen != null && volumen > 0
                 ? Reglas.redondear(biomasa / volumen, 2)
                 : null;
 
-        WaterReading lectura = lecturas.findFirstByPondIdAndTempCIsNotNullOrderByRecordedAtDesc(lote.getPondId())
+        WaterReading lectura = readings.findFirstByPondIdAndTempCIsNotNullOrderByRecordedAtDesc(lote.getPondId())
                 .orElse(null);
         Double temp = lectura != null ? lectura.getTempC() : null;
         if (lectura == null) {
-            notas.add("No hay lecturas de temperatura del estanque.");
+            notes.add("No hay lecturas de temperatura del estanque.");
         }
 
         Double tasa = null;
         Double racion = null;
         if (peso != null && temp != null) {
-            tasa = Reglas.tasaAlimentacionPct(peso, temp);
+            tasa = Reglas.feedingRatePct(peso, temp);
             if (biomasa != null) {
-                racion = Reglas.racionDiariaKg(biomasa, peso, temp);
+                racion = Reglas.dailyRationKg(biomasa, peso, temp);
             }
             if (tasa == 0) {
-                notas.add("Agua sobre 18 °C: se recomienda suspender la alimentación.");
+                notes.add("Agua sobre 18 °C: se recomienda suspender la alimentación.");
             }
         }
 
-        Long diasCultivo = lote.getStockingDate() != null
+        Long cultureDays = lote.getStockingDate() != null
                 ? ChronoUnit.DAYS.between(lote.getStockingDate(), LocalDate.now(Fechas.ZONA_GRANJA))
                 : null;
 
-        double alimentoSemana = alimentaciones.kgForBatchSince(loteId, Instant.now().minus(Duration.ofDays(7)));
+        double alimentoSemana = alimentaciones.kgForBatchSince(batchId, Instant.now().minus(Duration.ofDays(7)));
 
         // Factor de conversión alimenticia (FCA): kg de alimento por cada kg de biomasa ganada
-        double alimentoTotal = alimentaciones.totalKgForBatch(loteId);
+        double alimentoTotal = alimentaciones.totalKgForBatch(batchId);
         Double conversion = null;
-        if (biomasa != null && cantidadInicial != null && lote.getInitialWeightG() != null && alimentoTotal > 0) {
-            double ganancia = biomasa - cantidadInicial * lote.getInitialWeightG() / 1000;
+        if (biomasa != null && initialQuantity != null && lote.getInitialWeightG() != null && alimentoTotal > 0) {
+            double ganancia = biomasa - initialQuantity * lote.getInitialWeightG() / 1000;
             if (ganancia > 0) {
                 conversion = Reglas.redondear(alimentoTotal / ganancia, 2);
             }
         }
 
-        return new ResumenLote(
-                lote.getId(), lote.getCode(), lote.getPondId(), diasCultivo,
-                cantidadInicial, poblacion, mortalidadTotal, supervivencia,
+        return new BatchSummary(
+                lote.getId(), lote.getCode(), lote.getPondId(), cultureDays,
+                initialQuantity, poblacion, totalMortality, supervivencia,
                 peso, biomasa, densidad, temp, lectura != null ? lectura.getRecordedAt() : null,
                 tasa, racion, Reglas.redondear(alimentoSemana, 3),
                 Reglas.redondear(alimentoTotal, 3), conversion,
                 alertas.countByPondIdAndAttendedFalse(lote.getPondId()),
-                notas);
+                notes);
     }
 
-    public List<AlertaSalida> listarAlertas(boolean pendientes, UUID estanqueId, int limite) {
+    public List<AlertResponse> listarAlertas(boolean pendientes, UUID pondId, int limite) {
         StringBuilder jpql = new StringBuilder("select a from Alert a where 1 = 1");
         if (pendientes) jpql.append(" and a.attended = false");
-        if (estanqueId != null) jpql.append(" and a.pondId = :estanque");
+        if (pondId != null) jpql.append(" and a.pondId = :estanque");
         jpql.append(" order by a.measuredAt desc");
 
         TypedQuery<Alert> consulta = em.createQuery(jpql.toString(), Alert.class)
                 .setMaxResults(Math.max(1, Math.min(limite, 1000)));
-        if (estanqueId != null) consulta.setParameter("estanque", estanqueId);
-        return consulta.getResultList().stream().map(AlertaSalida::de).toList();
+        if (pondId != null) consulta.setParameter("estanque", pondId);
+        return consulta.getResultList().stream().map(AlertResponse::from).toList();
     }
 
     @Transactional
-    public AlertaSalida atenderAlerta(UUID id) {
+    public AlertResponse atenderAlerta(UUID id) {
         Alert alerta = alertas.findById(id).orElseThrow(() -> CatalogoService.noExiste("La alerta"));
         // Atender dos veces no cambia la hora original
         if (!alerta.isAttended()) {
             alerta.setAttended(true);
             alerta.setAttendedAt(ServerClock.now());
         }
-        return AlertaSalida.de(alerta);
+        return AlertResponse.from(alerta);
     }
 }

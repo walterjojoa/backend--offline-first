@@ -70,8 +70,8 @@ class ApiTest {
                 .content(mapper.writeValueAsString(completo)), 200);
     }
 
-    JsonNode pushEventos(Object... eventos) throws Exception {
-        return push(mapa("eventos", List.of(eventos)));
+    JsonNode pushEventos(Object... events) throws Exception {
+        return push(mapa("eventos", List.of(events)));
     }
 
     /** Crea un estanque y un lote de 5000 alevinos de 2 g. Devuelve {estanque, lote}. */
@@ -141,13 +141,13 @@ class ApiTest {
         JsonNode r = pushEventos(bueno, phImposible, loteInexistente, tipoRaro, sinVariables);
         assertThat(textos(r.get("aceptados"))).containsExactly((String) bueno.get("id"));
 
-        Map<String, String> rechazados = new HashMap<>();
-        r.get("rechazados").forEach(x -> rechazados.put(x.get("id").asText(), x.get("error").asText()));
-        assertThat(rechazados).containsOnlyKeys((String) phImposible.get("id"), (String) loteInexistente.get("id"),
+        Map<String, String> rejected = new HashMap<>();
+        r.get("rechazados").forEach(x -> rejected.put(x.get("id").asText(), x.get("error").asText()));
+        assertThat(rejected).containsOnlyKeys((String) phImposible.get("id"), (String) loteInexistente.get("id"),
                 (String) tipoRaro.get("id"), (String) sinVariables.get("id"));
-        assertThat(rechazados.get(phImposible.get("id"))).startsWith("ph:");
-        assertThat(rechazados.get(loteInexistente.get("id"))).isEqualTo("lote_id: no existe");
-        assertThat(rechazados.get(sinVariables.get("id"))).contains("no trae temperatura");
+        assertThat(rejected.get(phImposible.get("id"))).startsWith("ph:");
+        assertThat(rejected.get(loteInexistente.get("id"))).isEqualTo("lote_id: no existe");
+        assertThat(rejected.get(sinVariables.get("id"))).contains("no trae temperatura");
     }
 
     @Test
@@ -225,9 +225,9 @@ class ApiTest {
         JsonNode alertas = llamar(get("/api/alertas").param("estanque_id", estanque), 200);
         assertThat(alertas.get(0).get("nivel").asText()).isEqualTo("advertencia");
         String id = alertas.get(0).get("id").asText();
-        JsonNode atendida = llamar(post("/api/alertas/" + id + "/atender"), 200);
-        assertThat(atendida.get("atendida").asBoolean()).isTrue();
-        String hora = atendida.get("atendida_en").asText();
+        JsonNode attended = llamar(post("/api/alertas/" + id + "/atender"), 200);
+        assertThat(attended.get("atendida").asBoolean()).isTrue();
+        String hora = attended.get("atendida_en").asText();
         assertThat(hora).isNotEmpty();
         assertThat(llamar(post("/api/alertas/" + id + "/atender"), 200).get("atendida_en").asText()).isEqualTo(hora);
         assertThat(llamar(get("/api/alertas").param("estanque_id", estanque), 200)).isEmpty();

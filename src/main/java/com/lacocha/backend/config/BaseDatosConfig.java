@@ -67,20 +67,20 @@ public class BaseDatosConfig {
                 credenciales.length > 1 ? decodificar(credenciales[1]) : "");
     }
 
-    private static String parametro(String query, String nombre, String porDefecto) {
+    private static String parametro(String query, String name, String porDefecto) {
         if (query == null) {
             return porDefecto;
         }
         for (String par : query.split("&")) {
             String[] kv = par.split("=", 2);
-            if (kv[0].equals(nombre) && kv.length == 2) {
+            if (kv[0].equals(name) && kv.length == 2) {
                 return kv[1];
             }
         }
         return porDefecto;
     }
 
-    private static String decodificar(String valor) {
-        return URLDecoder.decode(valor, StandardCharsets.UTF_8);
+    private static String decodificar(String value) {
+        return URLDecoder.decode(value, StandardCharsets.UTF_8);
     }
 }
