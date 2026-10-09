@@ -145,6 +145,12 @@ public class ConsultaService {
         }
         Double biomasa = poblacion != null && peso != null ? Reglas.redondear(poblacion * peso / 1000, 3) : null;
 
+        // Densidad de siembra: sirve para saber si el estanque está sobrecargado
+        Double volumen = estanques.findById(lote.getEstanqueId()).map(e -> e.getVolumenM3()).orElse(null);
+        Double densidad = biomasa != null && volumen != null && volumen > 0
+                ? Reglas.redondear(biomasa / volumen, 2)
+                : null;
+
         LecturaAgua lectura = lecturas.findFirstByEstanqueIdAndTempCIsNotNullOrderByRegistradoEnDesc(lote.getEstanqueId())
                 .orElse(null);
         Double temp = lectura != null ? lectura.getTempC() : null;
@@ -173,7 +179,7 @@ public class ConsultaService {
         return new ResumenLote(
                 lote.getId(), lote.getCodigo(), lote.getEstanqueId(), diasCultivo,
                 cantidadInicial, poblacion, mortalidadTotal, supervivencia,
-                peso, biomasa, temp, lectura != null ? lectura.getRegistradoEn() : null,
+                peso, biomasa, densidad, temp, lectura != null ? lectura.getRegistradoEn() : null,
                 tasa, racion, Reglas.redondear(alimentoSemana, 3),
                 alertas.countByEstanqueIdAndAtendidaFalse(lote.getEstanqueId()),
                 notas);

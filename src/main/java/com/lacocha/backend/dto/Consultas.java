@@ -71,6 +71,7 @@ public final class Consultas {
             Double supervivenciaPct,
             Double pesoPromedioG,
             Double biomasaKg,
+            Double densidadKgM3,
             Double ultimaTemperaturaC,
             Instant ultimaLecturaEn,
             Double tasaAlimentacionPct,

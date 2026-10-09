@@ -346,4 +346,16 @@ class ApiTest {
                 "cantidad_inicial", 1000, "actualizado_en", hace(5)))));
         assertThat(llamar(get("/api/lotes/" + lote + "/resumen"), 200).get("dias_cultivo").asInt()).isEqualTo(21);
     }
+
+    @Test
+    void resumenCalculaLaDensidad() throws Exception {
+        String estanque = nuevoId();
+        String lote = nuevoId();
+        push(mapa(
+                "estanques", List.of(mapa("id", estanque, "nombre", "Tanque D", "volumen_m3", 2.0, "actualizado_en", hace(60))),
+                "lotes", List.of(mapa("id", lote, "estanque_id", estanque, "codigo", "LD", "cantidad_inicial", 1000,
+                        "peso_inicial_g", 5.0, "actualizado_en", hace(60)))));
+        // 1000 alevinos x 5 g = 5 kg en 2 m3
+        assertThat(llamar(get("/api/lotes/" + lote + "/resumen"), 200).get("densidad_kg_m3").asDouble()).isEqualTo(2.5);
+    }
 }
