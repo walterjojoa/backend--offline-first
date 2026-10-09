@@ -41,6 +41,11 @@ public class CatalogoController {
         return servicio.listarEstanques();
     }
 
+    @GetMapping("/estanques/{id}")
+    public EstanqueSalida obtenerEstanque(@PathVariable UUID id) {
+        return servicio.obtenerEstanque(id);
+    }
+
     @PostMapping("/estanques")
     @ResponseStatus(HttpStatus.CREATED)
     public EstanqueSalida crearEstanque(@Valid @RequestBody EstanqueCrear datos) {
@@ -57,6 +62,11 @@ public class CatalogoController {
             @RequestParam(name = "estanque_id", required = false) UUID estanqueId,
             @RequestParam(required = false) String estado) {
         return servicio.listarLotes(estanqueId, estado);
+    }
+
+    @GetMapping("/lotes/{id}")
+    public LoteSalida obtenerLote(@PathVariable UUID id) {
+        return servicio.obtenerLote(id);
     }
 
     @PostMapping("/lotes")

@@ -284,4 +284,12 @@ class ApiTest {
         JsonNode m = llamar(delete("/api/estanques"), 405);
         assertThat(m.get("detalle").asText()).isEqualTo("Método DELETE no permitido en esta ruta");
     }
+
+    @Test
+    void obtenerEstanqueYLotePorId() throws Exception {
+        String[] cat = crearCatalogo();
+        assertThat(llamar(get("/api/estanques/" + cat[0]), 200).get("nombre").asText()).isEqualTo("Tanque 1");
+        assertThat(llamar(get("/api/lotes/" + cat[1]), 200).get("codigo").asText()).isEqualTo("L12");
+        assertThat(llamar(get("/api/lotes/" + nuevoId()), 404).get("detalle").asText()).isEqualTo("El lote no existe");
+    }
 }

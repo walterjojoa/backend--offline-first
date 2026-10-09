@@ -41,6 +41,11 @@ public class CatalogoService {
         return estanques.findAllByOrderByNombreAsc().stream().map(EstanqueSalida::de).toList();
     }
 
+    @Transactional(readOnly = true)
+    public EstanqueSalida obtenerEstanque(UUID id) {
+        return EstanqueSalida.de(estanques.findById(id).orElseThrow(() -> noExiste("El estanque")));
+    }
+
     @Transactional
     public EstanqueSalida crearEstanque(EstanqueCrear datos) {
         if (datos.id() != null && estanques.existsById(datos.id())) {
@@ -85,6 +90,11 @@ public class CatalogoService {
         if (estanqueId != null) consulta.setParameter("estanque", estanqueId);
         if (estado != null) consulta.setParameter("estado", estado);
         return consulta.getResultList().stream().map(LoteSalida::de).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public LoteSalida obtenerLote(UUID id) {
+        return LoteSalida.de(lotes.findById(id).orElseThrow(() -> noExiste("El lote")));
     }
 
     @Transactional
