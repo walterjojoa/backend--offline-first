@@ -30,7 +30,8 @@ public class ManejadorErrores {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, String>> validacion(MethodArgumentNotValidException ex) {
         String detalle = ex.getBindingResult().getFieldErrors().stream()
-                .map(e -> e.getField() + ": " + e.getDefaultMessage())
+                // Mismo nombre que en el JSON (fecha_siembra, no fechaSiembra)
+                .map(e -> aSnake(e.getField()) + ": " + e.getDefaultMessage())
                 .sorted()
                 .collect(Collectors.joining("; "));
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("detalle", detalle));
@@ -63,5 +64,9 @@ public class ManejadorErrores {
         log.error("Error no controlado", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("detalle", "Error interno del servidor. Intenta de nuevo más tarde"));
+    }
+
+    private static String aSnake(String camel) {
+        return camel.replaceAll("([a-z0-9])([A-Z])", "$1_$2").toLowerCase();
     }
 }

@@ -435,6 +435,6 @@ class ApiTest {
         String manana = java.time.LocalDate.now().plusDays(5).toString();
         JsonNode r = llamar(post("/api/lotes").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"estanque_id\":\"" + estanque + "\",\"codigo\":\"LF\",\"fecha_siembra\":\"" + manana + "\"}"), 422);
-        assertThat(r.get("detalle").asText()).startsWith("fechaSiembra:");
+        assertThat(r.get("detalle").asText()).startsWith("fecha_siembra:");
     }
 }
