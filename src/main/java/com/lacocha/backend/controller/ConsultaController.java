@@ -23,7 +23,7 @@ import com.lacocha.backend.dto.Queries.WaterReadingResponse;
 import com.lacocha.backend.dto.Queries.DailyReadings;
 import com.lacocha.backend.dto.Queries.BatchSummary;
 import com.lacocha.backend.dto.Sync.AlertResponse;
-import com.lacocha.backend.service.ConsultaService;
+import com.lacocha.backend.service.QueryService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -33,9 +33,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "Consultas")
 public class ConsultaController {
 
-    private final ConsultaService service;
+    private final QueryService service;
 
-    public ConsultaController(ConsultaService service) {
+    public ConsultaController(QueryService service) {
         this.service = service;
     }
 
@@ -46,7 +46,7 @@ public class ConsultaController {
             @RequestParam(name = "desde", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime desde,
             @RequestParam(name = "hasta", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime hasta,
             @RequestParam(name = "limite", defaultValue = "500") int limite) {
-        return service.lecturasEstanque(id,
+        return service.pondReadings(id,
                 desde != null ? desde.toInstant() : null,
                 hasta != null ? hasta.toInstant() : null,
                 limite);
@@ -58,7 +58,7 @@ public class ConsultaController {
             @PathVariable UUID id,
             @RequestParam(name = "desde", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime desde,
             @RequestParam(name = "hasta", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime hasta) {
-        List<WaterReadingResponse> lista = service.lecturasEstanque(id,
+        List<WaterReadingResponse> lista = service.pondReadings(id,
                 desde != null ? desde.toInstant() : null,
                 hasta != null ? hasta.toInstant() : null,
                 5000);
@@ -85,37 +85,37 @@ public class ConsultaController {
     @GetMapping("/estanques/{id}/lecturas/diario")
     @Operation(summary = "Mínimo, máximo y promedio diario de temperatura y pH (para gráficas)")
     public List<DailyReadings> lecturasDiarias(@PathVariable UUID id, @RequestParam(name = "dias", defaultValue = "7") int dias) {
-        return service.lecturasPorDia(id, dias);
+        return service.dailyReadings(id, dias);
     }
 
     @GetMapping("/lotes/{id}/conteos")
     @Operation(summary = "Historial de conteos de alevinos del lote")
     public List<FryCountResponse> conteos(@PathVariable UUID id, @RequestParam(name = "limite", defaultValue = "100") int limite) {
-        return service.conteosLote(id, limite);
+        return service.fryCounts(id, limite);
     }
 
     @GetMapping("/lotes/{id}/mortalidades")
     @Operation(summary = "Historial de mortalidad del lote")
     public List<MortalityResponse> mortalidades(@PathVariable UUID id, @RequestParam(name = "limite", defaultValue = "100") int limite) {
-        return service.mortalidadesLote(id, limite);
+        return service.mortalities(id, limite);
     }
 
     @GetMapping("/lotes/{id}/alimentaciones")
     @Operation(summary = "Historial de alimentación del lote")
     public List<FeedingResponse> alimentaciones(@PathVariable UUID id, @RequestParam(name = "limite", defaultValue = "100") int limite) {
-        return service.alimentacionesLote(id, limite);
+        return service.feedings(id, limite);
     }
 
     @GetMapping("/lotes/{id}/biometrias")
     @Operation(summary = "Historial de biometrías (peso promedio) del lote")
     public List<BiometryResponse> biometrias(@PathVariable UUID id, @RequestParam(name = "limite", defaultValue = "100") int limite) {
-        return service.biometriasLote(id, limite);
+        return service.biometries(id, limite);
     }
 
     @GetMapping("/lotes/{id}/resumen")
     @Operation(summary = "Población, supervivencia, biomasa y ración sugerida del lote")
     public BatchSummary resumen(@PathVariable UUID id) {
-        return service.resumenLote(id);
+        return service.batchSummary(id);
     }
 
     @GetMapping("/alertas")
@@ -124,12 +124,12 @@ public class ConsultaController {
             @RequestParam(name = "pendientes", defaultValue = "true") boolean pendientes,
             @RequestParam(name = "estanque_id", required = false) UUID pondId,
             @RequestParam(name = "limite", defaultValue = "100") int limite) {
-        return service.listarAlertas(pendientes, pondId, limite);
+        return service.listAlerts(pendientes, pondId, limite);
     }
 
     @PostMapping("/alertas/{id}/atender")
     @Operation(summary = "Marcar una alerta como atendida")
     public AlertResponse atender(@PathVariable UUID id) {
-        return service.atenderAlerta(id);
+        return service.attendAlert(id);
     }
 }

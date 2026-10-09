@@ -11,27 +11,27 @@ class FechasTest {
 
     @Test
     void fechaNormalEsValida() {
-        assertThat(Fechas.errorFechaDispositivo(OffsetDateTime.now(ZoneOffset.ofHours(-5)).minusHours(3))).isNull();
+        assertThat(Dates.deviceDateError(OffsetDateTime.now(ZoneOffset.ofHours(-5)).minusHours(3))).isNull();
     }
 
     @Test
     void unasHorasAdelanteSeToleran() {
-        assertThat(Fechas.errorFechaDispositivo(OffsetDateTime.now().plusHours(6))).isNull();
+        assertThat(Dates.deviceDateError(OffsetDateTime.now().plusHours(6))).isNull();
     }
 
     @Test
     void masDeUnDiaEnElFuturoSeRechaza() {
-        assertThat(Fechas.errorFechaDispositivo(OffsetDateTime.now().plusDays(2))).contains("futuro");
+        assertThat(Dates.deviceDateError(OffsetDateTime.now().plusDays(2))).contains("futuro");
     }
 
     @Test
     void relojEn1970SeRechaza() {
-        assertThat(Fechas.errorFechaDispositivo(OffsetDateTime.of(1970, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC)))
+        assertThat(Dates.deviceDateError(OffsetDateTime.of(1970, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC)))
                 .contains("antigua");
     }
 
     @Test
     void sinFechaNoHayError() {
-        assertThat(Fechas.errorFechaDispositivo(null)).isNull();
+        assertThat(Dates.deviceDateError(null)).isNull();
     }
 }

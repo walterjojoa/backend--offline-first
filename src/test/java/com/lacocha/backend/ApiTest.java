@@ -218,7 +218,7 @@ class ApiTest {
     }
 
     @Test
-    void atenderAlerta() throws Exception {
+    void attendAlert() throws Exception {
         String estanque = crearCatalogo()[0];
         pushEventos(mapa("tipo", "lectura_agua", "id", nuevoId(), "estanque_id", estanque, "ph", 6.2, "registrado_en", hace(1)));
 
