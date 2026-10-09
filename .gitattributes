@@ -1,0 +1,5 @@
+# El script mvnw debe quedar con saltos de línea LF para que funcione en Docker/Linux
+mvnw text eol=lf
+*.sh text eol=lf
+*.cmd text eol=crlf
+* text=auto
