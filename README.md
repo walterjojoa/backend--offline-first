@@ -165,7 +165,7 @@ Render no tiene Java nativo, por eso se despliega con el `Dockerfile` incluido.
 3. En **Render** → **New** → **Blueprint** → elige el repositorio. Render lee `render.yaml`.
 4. Cuando pida las variables, llena:
    - `DATABASE_URL` = la cadena de Neon
-   - `API_KEY` = una clave larga (la usará la app)
+   - `API_KEY` no se escribe: Render genera una clave larga al azar (luego se copia en la app y el panel)
    - `ALLOWED_ORIGINS` = la URL del panel web, o `http://localhost:5173` por ahora
 5. **Apply**. La primera compilación tarda unos minutos. Al terminar abre
    `https://<tu-servicio>.onrender.com/salud` → debe decir `{"estado":"ok","version":"…"}`.

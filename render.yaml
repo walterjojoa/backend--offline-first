@@ -9,7 +9,8 @@ services:
       # Filled in by hand in the Render dashboard (sync: false) so a push does not overwrite them
       - key: DATABASE_URL
         sync: false
+      # Render creates a long random key once; the app and the web panel copy it from the dashboard
       - key: API_KEY
-        sync: false
+        generateValue: true
       - key: ALLOWED_ORIGINS
         sync: false
