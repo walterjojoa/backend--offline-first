@@ -3,6 +3,7 @@ package com.lacocha.backend;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 import java.time.Duration;
@@ -273,5 +274,14 @@ class ApiTest {
 
         llamar(post("/api/lotes").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"id\":\"" + cat[1] + "\",\"estanque_id\":\"" + cat[0] + "\",\"codigo\":\"X\"}"), 409);
+    }
+
+    @Test
+    void rutaYMetodoInexistentesRespondenEnJson() throws Exception {
+        JsonNode r = llamar(get("/api/no-existe"), 404);
+        assertThat(r.get("detalle").asText()).contains("no existe");
+
+        JsonNode m = llamar(delete("/api/estanques"), 405);
+        assertThat(m.get("detalle").asText()).isEqualTo("Método DELETE no permitido en esta ruta");
     }
 }
