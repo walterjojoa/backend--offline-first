@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import com.lacocha.backend.modelo.Mortalidad;
 import com.lacocha.backend.modelo.Conteo;
 import com.lacocha.backend.modelo.LecturaAgua;
 
@@ -27,6 +28,15 @@ public final class Consultas {
         public static ConteoSalida de(Conteo c) {
             return new ConteoSalida(c.getId(), c.getLoteId(), c.getTotal(), c.getCortesMultiples(), c.getOrigen(),
                     c.getDispositivoId(), c.getRegistradoEn());
+        }
+    }
+
+    public record MortalidadSalida(UUID id, UUID loteId, Integer cantidad, String causa, String origen,
+            String dispositivoId, Instant registradoEn) {
+
+        public static MortalidadSalida de(Mortalidad m) {
+            return new MortalidadSalida(m.getId(), m.getLoteId(), m.getCantidad(), m.getCausa(), m.getOrigen(),
+                    m.getDispositivoId(), m.getRegistradoEn());
         }
     }
 

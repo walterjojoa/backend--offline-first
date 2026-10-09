@@ -10,12 +10,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.lacocha.backend.dto.Consultas.ConteoSalida;
+import com.lacocha.backend.dto.Consultas.MortalidadSalida;
 import com.lacocha.backend.dto.Consultas.LecturaAguaSalida;
 import com.lacocha.backend.dto.Consultas.ResumenLote;
 import com.lacocha.backend.dto.Sync.AlertaSalida;
 import com.lacocha.backend.modelo.Alerta;
 import com.lacocha.backend.modelo.Biometria;
 import com.lacocha.backend.modelo.Conteo;
+import com.lacocha.backend.modelo.Mortalidad;
 import com.lacocha.backend.modelo.Evento;
 import com.lacocha.backend.modelo.LecturaAgua;
 import com.lacocha.backend.modelo.Lote;
@@ -78,6 +80,10 @@ public class ConsultaService {
 
     public List<ConteoSalida> conteosLote(UUID loteId, int limite) {
         return eventosLote(Conteo.class, loteId, limite).stream().map(ConteoSalida::de).toList();
+    }
+
+    public List<MortalidadSalida> mortalidadesLote(UUID loteId, int limite) {
+        return eventosLote(Mortalidad.class, loteId, limite).stream().map(MortalidadSalida::de).toList();
     }
 
     /** Historial de un tipo de evento del lote, del más reciente al más antiguo. */

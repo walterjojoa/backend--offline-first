@@ -305,4 +305,15 @@ class ApiTest {
         assertThat(r.get(0).get("dispositivo_id").asText()).isEqualTo("cel-1");
         llamar(get("/api/lotes/" + nuevoId() + "/conteos"), 404);
     }
+
+    @Test
+    void historialDeMortalidad() throws Exception {
+        String lote = crearCatalogo()[1];
+        pushEventos(mapa("tipo", "mortalidad", "id", nuevoId(), "lote_id", lote, "cantidad", 4, "causa", "hongos",
+                "origen", "voz", "registrado_en", hace(15)));
+        JsonNode r = llamar(get("/api/lotes/" + lote + "/mortalidades"), 200);
+        assertThat(r).hasSize(1);
+        assertThat(r.get(0).get("causa").asText()).isEqualTo("hongos");
+        assertThat(r.get(0).get("origen").asText()).isEqualTo("voz");
+    }
 }
