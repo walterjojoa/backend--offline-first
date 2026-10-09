@@ -13,4 +13,7 @@ public interface AlimentacionRepository extends JpaRepository<Alimentacion, UUID
 
     @Query("select coalesce(sum(a.kg), 0.0) from Alimentacion a where a.loteId = :loteId and a.registradoEn >= :desde")
     double kgDelLoteDesde(@Param("loteId") UUID loteId, @Param("desde") Instant desde);
+
+    @Query("select coalesce(sum(a.kg), 0.0) from Alimentacion a where a.loteId = :loteId")
+    double kgTotalDelLote(@Param("loteId") UUID loteId);
 }

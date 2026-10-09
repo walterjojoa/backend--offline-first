@@ -178,6 +178,8 @@ class ApiTest {
         assertThat(r.get("tasa_alimentacion_pct").asDouble()).isEqualTo(4.5);
         assertThat(r.get("racion_diaria_kg").asDouble()).isEqualTo(0.559);
         assertThat(r.get("alimento_ultima_semana_kg").asDouble()).isEqualTo(0.5);
+        assertThat(r.get("alimento_total_kg").asDouble()).isEqualTo(0.5);
+        assertThat(r.get("conversion_alimenticia").asDouble()).isEqualTo(0.21); // 0.5 kg / (12.425 - 10) kg
         assertThat(r.get("alertas_pendientes").asInt()).isZero();
         assertThat(r.get("notas")).isEmpty();
     }

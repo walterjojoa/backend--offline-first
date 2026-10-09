@@ -176,11 +176,22 @@ public class ConsultaService {
 
         double alimentoSemana = alimentaciones.kgDelLoteDesde(loteId, Instant.now().minus(Duration.ofDays(7)));
 
+        // Factor de conversión alimenticia (FCA): kg de alimento por cada kg de biomasa ganada
+        double alimentoTotal = alimentaciones.kgTotalDelLote(loteId);
+        Double conversion = null;
+        if (biomasa != null && cantidadInicial != null && lote.getPesoInicialG() != null && alimentoTotal > 0) {
+            double ganancia = biomasa - cantidadInicial * lote.getPesoInicialG() / 1000;
+            if (ganancia > 0) {
+                conversion = Reglas.redondear(alimentoTotal / ganancia, 2);
+            }
+        }
+
         return new ResumenLote(
                 lote.getId(), lote.getCodigo(), lote.getEstanqueId(), diasCultivo,
                 cantidadInicial, poblacion, mortalidadTotal, supervivencia,
                 peso, biomasa, densidad, temp, lectura != null ? lectura.getRegistradoEn() : null,
                 tasa, racion, Reglas.redondear(alimentoSemana, 3),
+                Reglas.redondear(alimentoTotal, 3), conversion,
                 alertas.countByEstanqueIdAndAtendidaFalse(lote.getEstanqueId()),
                 notas);
     }

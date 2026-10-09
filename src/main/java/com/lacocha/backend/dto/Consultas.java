@@ -77,6 +77,8 @@ public final class Consultas {
             Double tasaAlimentacionPct,
             Double racionDiariaKg,
             double alimentoUltimaSemanaKg,
+            double alimentoTotalKg,
+            Double conversionAlimenticia,
             long alertasPendientes,
             List<String> notas) {
     }
