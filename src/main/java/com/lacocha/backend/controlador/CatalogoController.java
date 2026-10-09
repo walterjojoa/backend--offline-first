@@ -66,7 +66,7 @@ public class CatalogoController {
     @Operation(summary = "Listar lotes, con filtros opcionales por estanque y estado")
     public List<LoteSalida> listarLotes(
             @RequestParam(name = "estanque_id", required = false) UUID estanqueId,
-            @RequestParam(required = false) String estado) {
+            @RequestParam(name = "estado", required = false) String estado) {
         return servicio.listarLotes(estanqueId, estado);
     }
 

@@ -39,7 +39,7 @@ public class SyncController {
     @GetMapping("/pull")
     @Operation(summary = "El celular baja cambios del catálogo y alertas pendientes")
     public PullRespuesta pull(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime desde) {
+            @RequestParam(name = "desde", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime desde) {
         return servicio.pull(desde != null ? desde.toInstant() : null);
     }
 }

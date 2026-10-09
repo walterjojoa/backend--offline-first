@@ -43,9 +43,9 @@ public class ConsultaController {
     @Operation(summary = "Historial de pH y temperatura de un estanque")
     public List<LecturaAguaSalida> lecturas(
             @PathVariable UUID id,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime desde,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime hasta,
-            @RequestParam(defaultValue = "500") int limite) {
+            @RequestParam(name = "desde", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime desde,
+            @RequestParam(name = "hasta", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime hasta,
+            @RequestParam(name = "limite", defaultValue = "500") int limite) {
         return servicio.lecturasEstanque(id,
                 desde != null ? desde.toInstant() : null,
                 hasta != null ? hasta.toInstant() : null,
@@ -56,8 +56,8 @@ public class ConsultaController {
     @Operation(summary = "Descargar el historial de lecturas en CSV (para Excel o análisis de la tesis)")
     public ResponseEntity<String> lecturasCsv(
             @PathVariable UUID id,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime desde,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime hasta) {
+            @RequestParam(name = "desde", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime desde,
+            @RequestParam(name = "hasta", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime hasta) {
         List<LecturaAguaSalida> lista = servicio.lecturasEstanque(id,
                 desde != null ? desde.toInstant() : null,
                 hasta != null ? hasta.toInstant() : null,
@@ -84,31 +84,31 @@ public class ConsultaController {
 
     @GetMapping("/estanques/{id}/lecturas/diario")
     @Operation(summary = "Mínimo, máximo y promedio diario de temperatura y pH (para gráficas)")
-    public List<LecturasDia> lecturasDiarias(@PathVariable UUID id, @RequestParam(defaultValue = "7") int dias) {
+    public List<LecturasDia> lecturasDiarias(@PathVariable UUID id, @RequestParam(name = "dias", defaultValue = "7") int dias) {
         return servicio.lecturasPorDia(id, dias);
     }
 
     @GetMapping("/lotes/{id}/conteos")
     @Operation(summary = "Historial de conteos de alevinos del lote")
-    public List<ConteoSalida> conteos(@PathVariable UUID id, @RequestParam(defaultValue = "100") int limite) {
+    public List<ConteoSalida> conteos(@PathVariable UUID id, @RequestParam(name = "limite", defaultValue = "100") int limite) {
         return servicio.conteosLote(id, limite);
     }
 
     @GetMapping("/lotes/{id}/mortalidades")
     @Operation(summary = "Historial de mortalidad del lote")
-    public List<MortalidadSalida> mortalidades(@PathVariable UUID id, @RequestParam(defaultValue = "100") int limite) {
+    public List<MortalidadSalida> mortalidades(@PathVariable UUID id, @RequestParam(name = "limite", defaultValue = "100") int limite) {
         return servicio.mortalidadesLote(id, limite);
     }
 
     @GetMapping("/lotes/{id}/alimentaciones")
     @Operation(summary = "Historial de alimentación del lote")
-    public List<AlimentacionSalida> alimentaciones(@PathVariable UUID id, @RequestParam(defaultValue = "100") int limite) {
+    public List<AlimentacionSalida> alimentaciones(@PathVariable UUID id, @RequestParam(name = "limite", defaultValue = "100") int limite) {
         return servicio.alimentacionesLote(id, limite);
     }
 
     @GetMapping("/lotes/{id}/biometrias")
     @Operation(summary = "Historial de biometrías (peso promedio) del lote")
-    public List<BiometriaSalida> biometrias(@PathVariable UUID id, @RequestParam(defaultValue = "100") int limite) {
+    public List<BiometriaSalida> biometrias(@PathVariable UUID id, @RequestParam(name = "limite", defaultValue = "100") int limite) {
         return servicio.biometriasLote(id, limite);
     }
 
@@ -121,9 +121,9 @@ public class ConsultaController {
     @GetMapping("/alertas")
     @Operation(summary = "Listar alertas (por defecto solo las pendientes)")
     public List<AlertaSalida> alertas(
-            @RequestParam(defaultValue = "true") boolean pendientes,
+            @RequestParam(name = "pendientes", defaultValue = "true") boolean pendientes,
             @RequestParam(name = "estanque_id", required = false) UUID estanqueId,
-            @RequestParam(defaultValue = "100") int limite) {
+            @RequestParam(name = "limite", defaultValue = "100") int limite) {
         return servicio.listarAlertas(pendientes, estanqueId, limite);
     }
 
