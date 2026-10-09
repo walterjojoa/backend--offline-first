@@ -24,8 +24,10 @@ public class WebConfig {
     public FilterRegistrationBean<CorsFilter> corsFilter(LaCochaProperties props) {
         CorsConfiguration cors = new CorsConfiguration();
         cors.setAllowedOrigins(props.origenes());
-        cors.setAllowedMethods(List.of("*"));
-        cors.setAllowedHeaders(List.of("*"));
+        cors.setAllowedMethods(List.of("GET", "POST", "PATCH", "OPTIONS"));
+        cors.setAllowedHeaders(List.of("Content-Type", "X-API-Key"));
+        // El navegador guarda la respuesta del preflight una hora y no la repite en cada llamada
+        cors.setMaxAge(3600L);
         UrlBasedCorsConfigurationSource fuente = new UrlBasedCorsConfigurationSource();
         fuente.registerCorsConfiguration("/**", cors);
 

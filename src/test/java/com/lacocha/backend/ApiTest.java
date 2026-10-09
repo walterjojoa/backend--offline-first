@@ -2,6 +2,7 @@ package com.lacocha.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 import java.time.Duration;
@@ -228,5 +229,21 @@ class ApiTest {
         JsonNode r = llamar(post("/api/estanques").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"nombre\":\"\",\"tipo\":\"piscina\"}"), 422);
         assertThat(r.get("detalle").asText()).contains("nombre").contains("tipo");
+    }
+
+    @Test
+    void corsPermiteElPanelYRechazaOtrosOrigenes() throws Exception {
+        MvcResult permitido = mvc.perform(options("/api/estanques")
+                .header("Origin", "http://localhost:5173")
+                .header("Access-Control-Request-Method", "PATCH")
+                .header("Access-Control-Request-Headers", "X-API-Key")).andReturn();
+        assertThat(permitido.getResponse().getStatus()).isEqualTo(200);
+        assertThat(permitido.getResponse().getHeader("Access-Control-Allow-Origin")).isEqualTo("http://localhost:5173");
+        assertThat(permitido.getResponse().getHeader("Access-Control-Max-Age")).isEqualTo("3600");
+
+        MvcResult extrano = mvc.perform(options("/api/estanques")
+                .header("Origin", "https://otro-sitio.com")
+                .header("Access-Control-Request-Method", "GET")).andReturn();
+        assertThat(extrano.getResponse().getStatus()).isEqualTo(403);
     }
 }
