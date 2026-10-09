@@ -11,13 +11,33 @@ genera alertas y calcula el resumen de cada lote.
 ```
 src/main/java/com/lacocha/backend/
 ├── config/        Base de datos (Neon), clave X-API-Key, CORS y Swagger
-├── modelo/        Entidades JPA (tablas)
-├── repositorio/   Consultas a la base de datos (Spring Data)
+├── model/         Entidades JPA (tablas)
+├── repository/    Consultas a la base de datos (Spring Data)
 ├── dto/           Lo que entra y sale de la API (records)
-├── servicio/      Lógica: sincronización, resumen del lote y reglas (sistema experto)
-└── controlador/   Rutas REST y manejo de errores
+├── service/       Lógica: sincronización, resumen del lote y reglas (sistema experto)
+└── controller/    Rutas REST y manejo de errores
 src/main/resources/db/migration/   Tablas (Flyway)
 ```
+
+### Idioma del código
+
+El código Java (clases, métodos, variables y comentarios) está en **inglés**. Lo que ve el usuario sigue
+en **español**: las rutas (`/api/estanques`), los campos del JSON (`registrado_en`), las tablas de la
+base de datos y los mensajes de error y de alertas. Así no cambia nada para la app ni para el ESP32.
+
+Los nombres del JSON se fijan con `@JsonProperty` en los DTO y las columnas con `@Column` en las entidades.
+
+| Español (API / BD) | Inglés (código) |
+|---|---|
+| estanque | `Pond` |
+| lote | `Batch` |
+| lectura de agua | `WaterReading` |
+| conteo de alevinos | `FryCount` |
+| mortalidad | `Mortality` |
+| alimentación | `Feeding` |
+| biometría | `Biometry` |
+| alerta | `Alert` |
+| reglas (sistema experto) | `Rules` |
 
 ## Correr en local
 
@@ -100,7 +120,7 @@ Todos los errores salen como `{"detalle": "..."}` con los nombres de campo igual
 - **Conversión alimenticia (FCA):** kg de alimento total entre kg de biomasa ganada desde la siembra.
 - **Días de cultivo:** desde `fecha_siembra` hasta hoy (hora de Colombia).
 
-Los umbrales y la tabla de alimentación están en `servicio/Reglas.java`. Son **valores de referencia**:
+Los umbrales y la tabla de alimentación están en `service/Rules.java`. Son **valores de referencia**:
 hay que ajustarlos con el productor y citarlos de AUNAP/FAO y del fabricante del alimento.
 
 ## Desplegar en Render + Neon

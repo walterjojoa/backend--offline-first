@@ -1,5 +1,14 @@
 # Cambios
 
+## 0.3.0
+
+### Cambios
+- Código Java traducido al inglés: paquetes (`controller`, `model`, `repository`, `service`), clases,
+  métodos, variables, comentarios y pruebas.
+- La API no cambia: rutas, parámetros, campos del JSON, tablas y mensajes siguen en español
+  (`@JsonProperty` en los DTO y `@Column` en las entidades).
+- Los errores de validación siguen nombrando los campos como en el JSON (`fecha_siembra`).
+
 ## 0.2.0
 
 ### Nuevo
