@@ -444,4 +444,13 @@ class ApiTest {
                 .content("{\"dispositivo_id\":\"cel 1 <script>\",\"eventos\":[]}"), 422);
         assertThat(r.get("detalle").asText()).startsWith("dispositivo_id:");
     }
+
+    @Test
+    void sinClaveDa401YLaDocumentacionQuedaLibre() throws Exception {
+        MvcResult sinClave = mvc.perform(get("/api/alertas")).andReturn();
+        assertThat(sinClave.getResponse().getStatus()).isEqualTo(401);
+        assertThat(sinClave.getResponse().getContentAsString()).contains("X-API-Key");
+
+        assertThat(mvc.perform(get("/v3/api-docs")).andReturn().getResponse().getStatus()).isEqualTo(200);
+    }
 }
