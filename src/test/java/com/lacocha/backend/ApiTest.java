@@ -410,4 +410,22 @@ class ApiTest {
         assertThat(ayer.get("ph_promedio").asDouble()).isEqualTo(7.0); // la lectura sin pH no cuenta
         assertThat(r.get(1).get("fecha").asText()).isEqualTo(hoy.toString());
     }
+
+    @Test
+    void exportarLecturasEnCsv() throws Exception {
+        String estanque = crearCatalogo()[0];
+        String t1 = Instant.now().minus(Duration.ofMinutes(20)).truncatedTo(java.time.temporal.ChronoUnit.SECONDS).toString();
+        String t2 = Instant.now().minus(Duration.ofMinutes(10)).truncatedTo(java.time.temporal.ChronoUnit.SECONDS).toString();
+        pushEventos(
+                mapa("tipo", "lectura_agua", "id", nuevoId(), "estanque_id", estanque, "temp_c", 12.5, "ph", 7.1, "origen", "sensor", "registrado_en", t1),
+                mapa("tipo", "lectura_agua", "id", nuevoId(), "estanque_id", estanque, "temp_c", 13.0, "registrado_en", t2));
+
+        MvcResult res = mvc.perform(get("/api/estanques/" + estanque + "/lecturas.csv").header("X-API-Key", CLAVE)).andReturn();
+        assertThat(res.getResponse().getStatus()).isEqualTo(200);
+        assertThat(res.getResponse().getContentType()).startsWith("text/csv");
+        assertThat(res.getResponse().getContentAsString()).isEqualTo(
+                "registrado_en,temp_c,ph,oxigeno_mg_l,origen\n"
+                        + t1 + ",12.5,7.1,,sensor\n"
+                        + t2 + ",13.0,,,manual\n");
+    }
 }

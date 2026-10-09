@@ -5,6 +5,9 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -47,6 +50,36 @@ public class ConsultaController {
                 desde != null ? desde.toInstant() : null,
                 hasta != null ? hasta.toInstant() : null,
                 limite);
+    }
+
+    @GetMapping(value = "/estanques/{id}/lecturas.csv", produces = "text/csv")
+    @Operation(summary = "Descargar el historial de lecturas en CSV (para Excel o análisis de la tesis)")
+    public ResponseEntity<String> lecturasCsv(
+            @PathVariable UUID id,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime desde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime hasta) {
+        List<LecturaAguaSalida> lista = servicio.lecturasEstanque(id,
+                desde != null ? desde.toInstant() : null,
+                hasta != null ? hasta.toInstant() : null,
+                5000);
+        StringBuilder csv = new StringBuilder("registrado_en,temp_c,ph,oxigeno_mg_l,origen\n");
+        // Del más antiguo al más reciente, como se espera en una hoja de cálculo
+        for (int i = lista.size() - 1; i >= 0; i--) {
+            LecturaAguaSalida l = lista.get(i);
+            csv.append(l.registradoEn()).append(',')
+                    .append(valor(l.tempC())).append(',')
+                    .append(valor(l.ph())).append(',')
+                    .append(valor(l.oxigenoMgL())).append(',')
+                    .append(l.origen()).append('\n');
+        }
+        return ResponseEntity.ok()
+                .contentType(new MediaType("text", "csv", java.nio.charset.StandardCharsets.UTF_8))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"lecturas-" + id + ".csv\"")
+                .body(csv.toString());
+    }
+
+    private static String valor(Double x) {
+        return x != null ? x.toString() : "";
     }
 
     @GetMapping("/estanques/{id}/lecturas/diario")
