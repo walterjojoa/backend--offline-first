@@ -9,12 +9,14 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.lacocha.backend.dto.Consultas.ConteoSalida;
 import com.lacocha.backend.dto.Consultas.LecturaAguaSalida;
 import com.lacocha.backend.dto.Consultas.ResumenLote;
 import com.lacocha.backend.dto.Sync.AlertaSalida;
 import com.lacocha.backend.modelo.Alerta;
 import com.lacocha.backend.modelo.Biometria;
 import com.lacocha.backend.modelo.Conteo;
+import com.lacocha.backend.modelo.Evento;
 import com.lacocha.backend.modelo.LecturaAgua;
 import com.lacocha.backend.modelo.Lote;
 import com.lacocha.backend.repositorio.AlertaRepository;
@@ -72,6 +74,22 @@ public class ConsultaService {
         if (desde != null) consulta.setParameter("desde", desde);
         if (hasta != null) consulta.setParameter("hasta", hasta);
         return consulta.getResultList().stream().map(LecturaAguaSalida::de).toList();
+    }
+
+    public List<ConteoSalida> conteosLote(UUID loteId, int limite) {
+        return eventosLote(Conteo.class, loteId, limite).stream().map(ConteoSalida::de).toList();
+    }
+
+    /** Historial de un tipo de evento del lote, del más reciente al más antiguo. */
+    private <T extends Evento> List<T> eventosLote(Class<T> clase, UUID loteId, int limite) {
+        if (!lotes.existsById(loteId)) {
+            throw CatalogoService.noExiste("El lote");
+        }
+        return em.createQuery("select e from " + clase.getSimpleName()
+                        + " e where e.loteId = :lote order by e.registradoEn desc", clase)
+                .setParameter("lote", loteId)
+                .setMaxResults(Math.max(1, Math.min(limite, 1000)))
+                .getResultList();
     }
 
     public ResumenLote resumenLote(UUID loteId) {

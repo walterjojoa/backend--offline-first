@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import com.lacocha.backend.modelo.Conteo;
 import com.lacocha.backend.modelo.LecturaAgua;
 
 public final class Consultas {
@@ -17,6 +18,15 @@ public final class Consultas {
         public static LecturaAguaSalida de(LecturaAgua l) {
             return new LecturaAguaSalida(l.getId(), l.getEstanqueId(), l.getTempC(), l.getPh(), l.getOxigenoMgL(),
                     l.getOrigen(), l.getRegistradoEn());
+        }
+    }
+
+    public record ConteoSalida(UUID id, UUID loteId, Integer total, Integer cortesMultiples, String origen,
+            String dispositivoId, Instant registradoEn) {
+
+        public static ConteoSalida de(Conteo c) {
+            return new ConteoSalida(c.getId(), c.getLoteId(), c.getTotal(), c.getCortesMultiples(), c.getOrigen(),
+                    c.getDispositivoId(), c.getRegistradoEn());
         }
     }
 

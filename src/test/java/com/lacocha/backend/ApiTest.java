@@ -292,4 +292,17 @@ class ApiTest {
         assertThat(llamar(get("/api/lotes/" + cat[1]), 200).get("codigo").asText()).isEqualTo("L12");
         assertThat(llamar(get("/api/lotes/" + nuevoId()), 404).get("detalle").asText()).isEqualTo("El lote no existe");
     }
+
+    @Test
+    void historialDeConteos() throws Exception {
+        String lote = crearCatalogo()[1];
+        pushEventos(
+                mapa("tipo", "conteo", "id", nuevoId(), "lote_id", lote, "total", 5000, "origen", "contador", "registrado_en", hace(60)),
+                mapa("tipo", "conteo", "id", nuevoId(), "lote_id", lote, "total", 4950, "origen", "contador", "registrado_en", hace(10)));
+
+        JsonNode r = llamar(get("/api/lotes/" + lote + "/conteos"), 200);
+        assertThat(r).extracting(n -> n.get("total").asInt()).containsExactly(4950, 5000);
+        assertThat(r.get(0).get("dispositivo_id").asText()).isEqualTo("cel-1");
+        llamar(get("/api/lotes/" + nuevoId() + "/conteos"), 404);
+    }
 }

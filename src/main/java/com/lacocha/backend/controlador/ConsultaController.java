@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.lacocha.backend.dto.Consultas.ConteoSalida;
 import com.lacocha.backend.dto.Consultas.LecturaAguaSalida;
 import com.lacocha.backend.dto.Consultas.ResumenLote;
 import com.lacocha.backend.dto.Sync.AlertaSalida;
@@ -42,6 +43,12 @@ public class ConsultaController {
                 desde != null ? desde.toInstant() : null,
                 hasta != null ? hasta.toInstant() : null,
                 limite);
+    }
+
+    @GetMapping("/lotes/{id}/conteos")
+    @Operation(summary = "Historial de conteos de alevinos del lote")
+    public List<ConteoSalida> conteos(@PathVariable UUID id, @RequestParam(defaultValue = "100") int limite) {
+        return servicio.conteosLote(id, limite);
     }
 
     @GetMapping("/lotes/{id}/resumen")
