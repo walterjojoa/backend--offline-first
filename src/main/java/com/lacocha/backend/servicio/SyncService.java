@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,6 +50,8 @@ import jakarta.validation.Validator;
  */
 @Service
 public class SyncService {
+
+    private static final Logger log = LoggerFactory.getLogger(SyncService.class);
 
     private final EntityManager em;
     private final EstanqueRepository estanques;
@@ -195,6 +199,9 @@ public class SyncService {
             }
         }
 
+        log.info("push de {}: {} aceptados, {} duplicados, {} obsoletos, {} rechazados, {} alertas",
+                peticion.dispositivoId(), r.aceptados.size(), r.duplicados.size(), r.obsoletos.size(),
+                r.rechazados.size(), r.alertasGeneradas);
         return new PushRespuesta(r.aceptados, r.duplicados, r.obsoletos, r.rechazados, r.alertasGeneradas, servidorEn);
     }
 
