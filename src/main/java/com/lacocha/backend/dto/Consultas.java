@@ -64,6 +64,7 @@ public final class Consultas {
             UUID loteId,
             String codigo,
             UUID estanqueId,
+            Long diasCultivo,
             Integer cantidadInicial,
             Integer poblacionEstimada,
             long mortalidadTotal,

@@ -336,4 +336,14 @@ class ApiTest {
         assertThat(r.get(0).get("peso_promedio_g").asDouble()).isEqualTo(3.1);
         assertThat(r.get(0).get("muestra").asInt()).isEqualTo(40);
     }
+
+    @Test
+    void resumenCalculaLosDiasDeCultivo() throws Exception {
+        String estanque = crearCatalogo()[0];
+        String lote = nuevoId();
+        String siembra = java.time.LocalDate.now(java.time.ZoneId.of("America/Bogota")).minusDays(21).toString();
+        push(mapa("lotes", List.of(mapa("id", lote, "estanque_id", estanque, "codigo", "L20", "fecha_siembra", siembra,
+                "cantidad_inicial", 1000, "actualizado_en", hace(5)))));
+        assertThat(llamar(get("/api/lotes/" + lote + "/resumen"), 200).get("dias_cultivo").asInt()).isEqualTo(21);
+    }
 }

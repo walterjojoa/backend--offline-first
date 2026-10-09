@@ -2,6 +2,8 @@ package com.lacocha.backend.servicio;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -162,10 +164,14 @@ public class ConsultaService {
             }
         }
 
+        Long diasCultivo = lote.getFechaSiembra() != null
+                ? ChronoUnit.DAYS.between(lote.getFechaSiembra(), LocalDate.now(Fechas.ZONA_GRANJA))
+                : null;
+
         double alimentoSemana = alimentaciones.kgDelLoteDesde(loteId, Instant.now().minus(Duration.ofDays(7)));
 
         return new ResumenLote(
-                lote.getId(), lote.getCodigo(), lote.getEstanqueId(),
+                lote.getId(), lote.getCodigo(), lote.getEstanqueId(), diasCultivo,
                 cantidadInicial, poblacion, mortalidadTotal, supervivencia,
                 peso, biomasa, temp, lectura != null ? lectura.getRegistradoEn() : null,
                 tasa, racion, Reglas.redondear(alimentoSemana, 3),

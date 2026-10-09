@@ -3,11 +3,15 @@ package com.lacocha.backend.servicio;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 
 final class Fechas {
 
     private Fechas() {
     }
+
+    /** Hora de Colombia: define qué es "hoy" para la granja, sin importar dónde corra el servidor. */
+    static final ZoneId ZONA_GRANJA = ZoneId.of("America/Bogota");
 
     /** Antes de esta fecha no existía el proyecto: un celular o ESP32 sin hora configurada suele reportar 1970. */
     static final Instant FECHA_MINIMA = Instant.parse("2024-01-01T00:00:00Z");
