@@ -5,8 +5,8 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-import com.lacocha.backend.modelo.Estanque;
-import com.lacocha.backend.modelo.Lote;
+import com.lacocha.backend.model.Estanque;
+import com.lacocha.backend.model.Lote;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

@@ -5,11 +5,11 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
-import com.lacocha.backend.modelo.Mortalidad;
-import com.lacocha.backend.modelo.Alimentacion;
-import com.lacocha.backend.modelo.Biometria;
-import com.lacocha.backend.modelo.Conteo;
-import com.lacocha.backend.modelo.LecturaAgua;
+import com.lacocha.backend.model.Mortalidad;
+import com.lacocha.backend.model.Alimentacion;
+import com.lacocha.backend.model.Biometria;
+import com.lacocha.backend.model.Conteo;
+import com.lacocha.backend.model.LecturaAgua;
 
 public final class Consultas {
 

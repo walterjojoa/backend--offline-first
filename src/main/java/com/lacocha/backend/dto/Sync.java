@@ -9,7 +9,7 @@ import com.lacocha.backend.dto.Catalogo.EstanqueSalida;
 import com.lacocha.backend.dto.Catalogo.EstanqueSync;
 import com.lacocha.backend.dto.Catalogo.LoteSalida;
 import com.lacocha.backend.dto.Catalogo.LoteSync;
-import com.lacocha.backend.modelo.Alerta;
+import com.lacocha.backend.model.Alerta;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;

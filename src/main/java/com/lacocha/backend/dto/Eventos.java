@@ -5,12 +5,12 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import com.lacocha.backend.modelo.Alimentacion;
-import com.lacocha.backend.modelo.Biometria;
-import com.lacocha.backend.modelo.Conteo;
-import com.lacocha.backend.modelo.Evento;
-import com.lacocha.backend.modelo.LecturaAgua;
-import com.lacocha.backend.modelo.Mortalidad;
+import com.lacocha.backend.model.Alimentacion;
+import com.lacocha.backend.model.Biometria;
+import com.lacocha.backend.model.Conteo;
+import com.lacocha.backend.model.Evento;
+import com.lacocha.backend.model.LecturaAgua;
+import com.lacocha.backend.model.Mortalidad;
 
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
