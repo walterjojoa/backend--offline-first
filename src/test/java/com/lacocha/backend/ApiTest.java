@@ -326,4 +326,14 @@ class ApiTest {
         JsonNode r = llamar(get("/api/lotes/" + lote + "/alimentaciones").param("limite", "1"), 200);
         assertThat(r).extracting(n -> n.get("kg").asDouble()).containsExactly(0.6);
     }
+
+    @Test
+    void historialDeBiometrias() throws Exception {
+        String lote = crearCatalogo()[1];
+        pushEventos(mapa("tipo", "biometria", "id", nuevoId(), "lote_id", lote, "peso_promedio_g", 3.1, "muestra", 40,
+                "registrado_en", hace(20)));
+        JsonNode r = llamar(get("/api/lotes/" + lote + "/biometrias"), 200);
+        assertThat(r.get(0).get("peso_promedio_g").asDouble()).isEqualTo(3.1);
+        assertThat(r.get(0).get("muestra").asInt()).isEqualTo(40);
+    }
 }
