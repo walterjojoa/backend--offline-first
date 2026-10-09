@@ -12,7 +12,8 @@ import com.lacocha.backend.dto.Catalog.PondResponse;
 import com.lacocha.backend.dto.Catalog.PondSync;
 import com.lacocha.backend.model.Alert;
 
-import jakarta.validation.Valid;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -26,9 +27,12 @@ public final class Sync {
             // Letters, digits, dash, underscore and dot: keeps the id clean in the records and in the log
             @JsonProperty("dispositivo_id") @NotBlank @Size(max = 64) @Pattern(regexp = "[A-Za-z0-9._-]+",
                     message = "solo letras, números, punto, guion y guion bajo") String deviceId,
-            @JsonProperty("estanques") @Valid @Size(max = 200) List<PondSync> ponds,
-            @JsonProperty("lotes") @Valid @Size(max = 200) List<BatchSync> batches,
-            // Validated one by one in the service: a bad event must not block the phone's queue
+            // Ponds, batches and events are validated one by one in the service: a bad one must not
+            // block the phone's queue. The schemas only tell /docs what each item looks like.
+            @JsonProperty("estanques") @Size(max = 200)
+            @ArraySchema(schema = @Schema(implementation = PondSync.class)) List<JsonNode> ponds,
+            @JsonProperty("lotes") @Size(max = 200)
+            @ArraySchema(schema = @Schema(implementation = BatchSync.class)) List<JsonNode> batches,
             @JsonProperty("eventos") @Size(max = 500) List<JsonNode> events) {
     }
 

@@ -155,6 +155,32 @@ class ApiTest {
     }
 
     @Test
+    void oneBadPondOrBatchDoesNotBlockThePush() throws Exception {
+        String goodPond = newId();
+        String noName = newId();
+        String textVolume = newId();
+        String longCode = newId();
+        String reading = newId();
+        JsonNode r = push(obj(
+                "estanques", List.of(
+                        obj("id", goodPond, "nombre", "Tanque B", "actualizado_en", minutesAgo(5)),
+                        obj("id", noName, "nombre", "", "actualizado_en", minutesAgo(5)),
+                        obj("id", textVolume, "nombre", "Tanque C", "volumen_m3", "mucho", "actualizado_en", minutesAgo(5))),
+                "lotes", List.of(obj("id", longCode, "estanque_id", goodPond, "codigo", "L".repeat(41),
+                        "actualizado_en", minutesAgo(5))),
+                "eventos", List.of(obj("tipo", "lectura_agua", "id", reading, "estanque_id", goodPond, "ph", 7.2,
+                        "registrado_en", minutesAgo(1)))));
+
+        assertThat(texts(r.get("aceptados"))).containsExactlyInAnyOrder(goodPond, reading);
+        Map<String, String> rejected = new HashMap<>();
+        r.get("rechazados").forEach(x -> rejected.put(x.get("id").asText(), x.get("error").asText()));
+        assertThat(rejected).containsOnlyKeys(noName, textVolume, longCode);
+        assertThat(rejected.get(noName)).startsWith("nombre:");
+        assertThat(rejected.get(textVolume)).isEqualTo("volumen_m3: formato no válido");
+        assertThat(rejected.get(longCode)).startsWith("codigo:");
+    }
+
+    @Test
     void futureDateIsRejected() throws Exception {
         String batch = createCatalog()[1];
         String future = Instant.now().plus(Duration.ofDays(3)).toString();

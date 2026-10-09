@@ -2,13 +2,20 @@ package com.lacocha.backend.dto;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lacocha.backend.dto.Catalog.BatchCreate;
+import com.lacocha.backend.dto.Catalog.PondSync;
 import com.lacocha.backend.dto.Events.WaterReadingInput;
-import com.lacocha.backend.dto.Sync.PushRequest;
 
 class JsonNamesTest {
+
+    /** A request with a list of records, like the ones the panel could send in bulk. */
+    record Bulk(@JsonProperty("estanques") List<PondSync> ponds) {
+    }
 
     @Test
     void usesTheJsonPropertyName() {
@@ -17,7 +24,7 @@ class JsonNamesTest {
 
     @Test
     void followsListsAndKeepsTheIndex() {
-        assertThat(JsonNames.of(PushRequest.class, "ponds[2].updatedAt")).isEqualTo("estanques[2].actualizado_en");
+        assertThat(JsonNames.of(Bulk.class, "ponds[2].updatedAt")).isEqualTo("estanques[2].actualizado_en");
     }
 
     @Test

@@ -81,8 +81,9 @@ public class SyncService {
         int alertsCreated = 0;
     }
 
-    private static class InvalidEvent extends Exception {
-        InvalidEvent(String message) {
+    /** A pond, batch or event that cannot be stored. It is rejected alone, the rest of the push goes on. */
+    private static class InvalidItem extends Exception {
+        InvalidItem(String message) {
             super(message);
         }
     }
@@ -92,7 +93,14 @@ public class SyncService {
         Instant serverTime = ServerClock.now();
         PushResult result = new PushResult();
 
-        for (PondSync p : orEmpty(request.ponds())) {
+        for (JsonNode raw : orEmpty(request.ponds())) {
+            PondSync p;
+            try {
+                p = parse(raw, PondSync.class);
+            } catch (InvalidItem ex) {
+                result.rejected.add(new Rejection(rawId(raw), ex.getMessage()));
+                continue;
+            }
             String error = Dates.deviceDateError(p.updatedAt());
             if (error != null) {
                 result.rejected.add(new Rejection(p.id().toString(), "actualizado_en: " + error));
@@ -119,7 +127,14 @@ public class SyncService {
         }
         em.flush();
 
-        for (BatchSync b : orEmpty(request.batches())) {
+        for (JsonNode raw : orEmpty(request.batches())) {
+            BatchSync b;
+            try {
+                b = parse(raw, BatchSync.class);
+            } catch (InvalidItem ex) {
+                result.rejected.add(new Rejection(rawId(raw), ex.getMessage()));
+                continue;
+            }
             String error = Dates.deviceDateError(b.updatedAt());
             if (error != null) {
                 result.rejected.add(new Rejection(b.id().toString(), "actualizado_en: " + error));
@@ -157,7 +172,7 @@ public class SyncService {
             Input event;
             try {
                 event = readEvent(raw);
-            } catch (InvalidEvent ex) {
+            } catch (InvalidItem ex) {
                 result.rejected.add(new Rejection(rawId(raw), ex.getMessage()));
                 continue;
             }
@@ -233,39 +248,47 @@ public class SyncService {
                 serverTime);
     }
 
-    private Input readEvent(JsonNode raw) throws InvalidEvent {
+    private Input readEvent(JsonNode raw) throws InvalidItem {
         if (raw == null || !raw.isObject()) {
-            throw new InvalidEvent("el evento debe ser un objeto JSON");
+            throw new InvalidItem("el evento debe ser un objeto JSON");
         }
         Class<? extends Input> type = Events.TYPES.get(raw.path("tipo").asText(""));
         if (type == null) {
-            throw new InvalidEvent("tipo: debe ser uno de " + String.join(", ", Events.TYPES.keySet()));
+            throw new InvalidItem("tipo: debe ser uno de " + String.join(", ", Events.TYPES.keySet()));
         }
 
-        Input event;
-        try {
-            event = mapper.treeToValue(raw, type);
-        } catch (JsonProcessingException ex) {
-            throw new InvalidEvent(fieldWithError(ex) + ": formato no válido");
-        }
-
-        Set<ConstraintViolation<Input>> violations = validator.validate(event);
-        if (!violations.isEmpty()) {
-            ConstraintViolation<Input> v = violations.stream()
-                    .min(Comparator.comparing(x -> x.getPropertyPath().toString()))
-                    .get();
-            throw new InvalidEvent(JsonNames.of(event.getClass(), v.getPropertyPath().toString()) + ": " + v.getMessage());
-        }
-
+        Input event = parse(raw, type);
         String error = Dates.deviceDateError(event.recordedAt());
         if (error != null) {
-            throw new InvalidEvent("registrado_en: " + error);
+            throw new InvalidItem("registrado_en: " + error);
         }
         error = event.extraError();
         if (error != null) {
-            throw new InvalidEvent(error);
+            throw new InvalidItem(error);
         }
         return event;
+    }
+
+    /** JSON -> record, plus its annotations (@NotNull, @Size...). The error names the field as in the JSON. */
+    private <T> T parse(JsonNode raw, Class<T> type) throws InvalidItem {
+        if (raw == null || !raw.isObject()) {
+            throw new InvalidItem("debe ser un objeto JSON");
+        }
+        T value;
+        try {
+            value = mapper.treeToValue(raw, type);
+        } catch (JsonProcessingException ex) {
+            throw new InvalidItem(fieldWithError(ex) + ": formato no válido");
+        }
+
+        Set<ConstraintViolation<T>> violations = validator.validate(value);
+        if (!violations.isEmpty()) {
+            ConstraintViolation<T> v = violations.stream()
+                    .min(Comparator.comparing(x -> x.getPropertyPath().toString()))
+                    .get();
+            throw new InvalidItem(JsonNames.of(type, v.getPropertyPath().toString()) + ": " + v.getMessage());
+        }
+        return value;
     }
 
     /** Jackson already reports the path with the JSON names. */
@@ -276,7 +299,7 @@ public class SyncService {
                 return field;
             }
         }
-        return "evento";
+        return "dato";
     }
 
     private static String rawId(JsonNode raw) {
