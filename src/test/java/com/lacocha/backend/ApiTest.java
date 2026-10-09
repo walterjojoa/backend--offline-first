@@ -246,4 +246,18 @@ class ApiTest {
                 .header("Access-Control-Request-Method", "GET")).andReturn();
         assertThat(extrano.getResponse().getStatus()).isEqualTo(403);
     }
+
+    @Test
+    void listarLotesFiltraPorEstanqueYEstado() throws Exception {
+        String[] cat = crearCatalogo();
+        String cerrado = nuevoId();
+        push(mapa("lotes", List.of(mapa("id", cerrado, "estanque_id", cat[0], "codigo", "L01", "estado", "cerrado",
+                "actualizado_en", hace(100)))));
+
+        JsonNode todos = llamar(get("/api/lotes").param("estanque_id", cat[0]), 200);
+        assertThat(todos).extracting(n -> n.get("codigo").asText()).containsExactly("L01", "L12");
+
+        JsonNode activos = llamar(get("/api/lotes").param("estanque_id", cat[0]).param("estado", "activo"), 200);
+        assertThat(activos).extracting(n -> n.get("id").asText()).containsExactly(cat[1]);
+    }
 }
