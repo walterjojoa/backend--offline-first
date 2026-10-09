@@ -1,0 +1,27 @@
+# PostgreSQL local para probar las migraciones contra el mismo motor que Neon.
+# Las pruebas normales usan H2; esto sirve para verificar lo especifico de PostgreSQL.
+#
+#   docker compose up -d
+#   .\mvnw spring-boot:run -Dspring-boot.run.profiles=postgres
+#
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lacocha-postgres
+    environment:
+      POSTGRES_DB: lacocha
+      POSTGRES_USER: lacocha
+      POSTGRES_PASSWORD: lacocha
+    ports:
+      # 5433 en el host: el 5432 suele estarlo ocupando un PostgreSQL instalado aparte
+      - "5433:5432"
+    volumes:
+      - postgres-datos:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lacocha -d lacocha"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-datos:

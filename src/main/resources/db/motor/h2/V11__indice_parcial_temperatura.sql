@@ -1,0 +1,6 @@
+-- En PostgreSQL esta version crea un indice parcial sobre las lecturas que traen temperatura.
+-- H2 no soporta indices parciales, y en desarrollo tampoco hace falta: el indice compuesto
+-- de V10 ya resuelve la consulta, solo descartando las filas con temp_c nula.
+--
+-- La migracion existe igual para que el historial de Flyway quede en la misma version en los
+-- dos motores; si no, las versiones siguientes se desalinearian.
