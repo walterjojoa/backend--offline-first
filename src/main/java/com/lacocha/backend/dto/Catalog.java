@@ -73,7 +73,8 @@ public final class Catalog {
             @JsonProperty("fecha_siembra") @PastOrPresent LocalDate stockingDate,
             @JsonProperty("cantidad_inicial") @PositiveOrZero Integer initialQuantity,
             @JsonProperty("peso_inicial_g") @Positive Double initialWeightG,
-            @JsonProperty("estado") @Pattern(regexp = BATCH_STATUSES) String status) {
+            @JsonProperty("estado") @Pattern(regexp = BATCH_STATUSES) String status,
+            @JsonProperty("fecha_cierre") @PastOrPresent LocalDate closingDate) {
     }
 
     public record BatchUpdate(
@@ -81,7 +82,8 @@ public final class Catalog {
             @JsonProperty("fecha_siembra") @PastOrPresent LocalDate stockingDate,
             @JsonProperty("cantidad_inicial") @PositiveOrZero Integer initialQuantity,
             @JsonProperty("peso_inicial_g") @Positive Double initialWeightG,
-            @JsonProperty("estado") @Pattern(regexp = BATCH_STATUSES) String status) {
+            @JsonProperty("estado") @Pattern(regexp = BATCH_STATUSES) String status,
+            @JsonProperty("fecha_cierre") @PastOrPresent LocalDate closingDate) {
     }
 
     public record BatchSync(
@@ -92,6 +94,7 @@ public final class Catalog {
             @JsonProperty("cantidad_inicial") @PositiveOrZero Integer initialQuantity,
             @JsonProperty("peso_inicial_g") @Positive Double initialWeightG,
             @JsonProperty("estado") @Pattern(regexp = BATCH_STATUSES) String status,
+            @JsonProperty("fecha_cierre") @PastOrPresent LocalDate closingDate,
             @JsonProperty("actualizado_en") @NotNull OffsetDateTime updatedAt) {
     }
 
@@ -103,11 +106,13 @@ public final class Catalog {
             @JsonProperty("cantidad_inicial") Integer initialQuantity,
             @JsonProperty("peso_inicial_g") Double initialWeightG,
             @JsonProperty("estado") String status,
+            @JsonProperty("fecha_cierre") LocalDate closingDate,
             @JsonProperty("actualizado_en") Instant updatedAt) {
 
         public static BatchResponse from(Batch b) {
             return new BatchResponse(b.getId(), b.getPondId(), b.getCode(), b.getStockingDate(),
-                    b.getInitialQuantity(), b.getInitialWeightG(), b.getStatus(), b.getUpdatedAt());
+                    b.getInitialQuantity(), b.getInitialWeightG(), b.getStatus(), b.getClosingDate(),
+                    b.getUpdatedAt());
         }
     }
 }

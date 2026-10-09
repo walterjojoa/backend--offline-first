@@ -126,9 +126,11 @@ public class QueryController {
     }
 
     @PostMapping("/alertas/{id}/atender")
-    @Operation(summary = "Marcar una alerta como atendida")
-    public AlertResponse attendAlert(@PathVariable UUID id) {
-        return service.attendAlert(id);
+    @Operation(summary = "Marcar una alerta como atendida, dejando quién y cuándo")
+    public AlertResponse attendAlert(
+            @PathVariable UUID id,
+            @RequestParam(name = "dispositivo_id", required = false) String deviceId) {
+        return service.attendAlert(id, deviceId != null ? deviceId : "panel");
     }
 
     private static Instant toInstant(OffsetDateTime date) {

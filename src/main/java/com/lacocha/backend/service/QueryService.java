@@ -14,8 +14,10 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.lacocha.backend.dto.Queries.BatchSummary;
 import com.lacocha.backend.dto.Queries.BiometryResponse;
@@ -260,13 +262,18 @@ public class QueryService {
         return query.getResultList().stream().map(AlertResponse::from).toList();
     }
 
+    /** who is the device id when the phone attends it, or "panel" from the browser. */
     @Transactional
-    public AlertResponse attendAlert(UUID id) {
+    public AlertResponse attendAlert(UUID id, String who) {
+        if (who.length() > 64) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "dispositivo_id: máximo 64 caracteres");
+        }
         Alert alert = alerts.findById(id).orElseThrow(() -> CatalogService.notFound("La alerta"));
-        // Attending twice does not change the original time
+        // Attending twice does not change the original time: what matters is how long the first response took
         if (!alert.isAttended()) {
             alert.setAttended(true);
             alert.setAttendedAt(ServerClock.now());
+            alert.setAttendedBy(who);
         }
         return AlertResponse.from(alert);
     }

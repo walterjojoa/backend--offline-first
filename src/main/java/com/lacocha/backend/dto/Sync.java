@@ -52,17 +52,21 @@ public final class Sync {
             UUID id,
             @JsonProperty("estanque_id") UUID pondId,
             @JsonProperty("lectura_id") UUID readingId,
+            @JsonProperty("lote_id") UUID batchId,
+            @JsonProperty("disparada_por") String triggeredBy,
             String variable,
             @JsonProperty("valor") Double value,
             @JsonProperty("nivel") String level,
             @JsonProperty("mensaje") String message,
             @JsonProperty("medido_en") Instant measuredAt,
             @JsonProperty("atendida") boolean attended,
-            @JsonProperty("atendida_en") Instant attendedAt) {
+            @JsonProperty("atendida_en") Instant attendedAt,
+            @JsonProperty("atendida_por") String attendedBy) {
 
         public static AlertResponse from(Alert a) {
-            return new AlertResponse(a.getId(), a.getPondId(), a.getReadingId(), a.getVariable(), a.getValue(),
-                    a.getLevel(), a.getMessage(), a.getMeasuredAt(), a.isAttended(), a.getAttendedAt());
+            return new AlertResponse(a.getId(), a.getPondId(), a.getReadingId(), a.getBatchId(), a.getTriggeredBy(),
+                    a.getVariable(), a.getValue(), a.getLevel(), a.getMessage(), a.getMeasuredAt(), a.isAttended(),
+                    a.getAttendedAt(), a.getAttendedBy());
         }
     }
 

@@ -122,7 +122,9 @@ public class CatalogService {
         if (data.status() != null) {
             batch.setStatus(data.status());
         }
+        batch.setClosingDate(data.closingDate());
         adjustClosing(batch);
+        requireValidClosing(batch);
         batch.setUpdatedAt(ServerClock.now());
         em.persist(batch);
         return BatchResponse.from(batch);
@@ -139,7 +141,9 @@ public class CatalogService {
         if (data.initialQuantity() != null) batch.setInitialQuantity(data.initialQuantity());
         if (data.initialWeightG() != null) batch.setInitialWeightG(data.initialWeightG());
         if (data.status() != null) batch.setStatus(data.status());
+        if (data.closingDate() != null) batch.setClosingDate(data.closingDate());
         adjustClosing(batch);
+        requireValidClosing(batch);
         batch.setUpdatedAt(ServerClock.now());
         batches.flush();
         return BatchResponse.from(batch);
@@ -172,6 +176,20 @@ public class CatalogService {
             LocalDate today = LocalDate.now(Dates.FARM_ZONE);
             LocalDate stocking = batch.getStockingDate();
             batch.setClosingDate(stocking != null && stocking.isAfter(today) ? stocking : today);
+        }
+    }
+
+    /** null when the dates are fine. The database also checks it (ck_lotes_orden_fechas). */
+    static String closingError(LocalDate stocking, LocalDate closing) {
+        return closing != null && stocking != null && closing.isBefore(stocking)
+                ? "fecha_cierre: no puede ser anterior a la fecha de siembra"
+                : null;
+    }
+
+    private static void requireValidClosing(Batch batch) {
+        String error = closingError(batch.getStockingDate(), batch.getClosingDate());
+        if (error != null) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, error);
         }
     }
 

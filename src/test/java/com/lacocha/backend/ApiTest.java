@@ -9,6 +9,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -339,11 +341,16 @@ class ApiTest {
         JsonNode alerts = call(get("/api/alertas").param("estanque_id", pond), 200);
         assertThat(alerts.get(0).get("nivel").asText()).isEqualTo("advertencia");
         String id = alerts.get(0).get("id").asText();
-        JsonNode attended = call(post("/api/alertas/" + id + "/atender"), 200);
+        assertThat(alerts.get(0).get("disparada_por").asText()).isEqualTo("lectura_agua");
+        JsonNode attended = call(post("/api/alertas/" + id + "/atender").param("dispositivo_id", "cel-1"), 200);
         assertThat(attended.get("atendida").asBoolean()).isTrue();
+        assertThat(attended.get("atendida_por").asText()).isEqualTo("cel-1");
         String time = attended.get("atendida_en").asText();
         assertThat(time).isNotEmpty();
-        assertThat(call(post("/api/alertas/" + id + "/atender"), 200).get("atendida_en").asText()).isEqualTo(time);
+        // Attending again from the panel keeps who answered first and when
+        JsonNode again = call(post("/api/alertas/" + id + "/atender"), 200);
+        assertThat(again.get("atendida_en").asText()).isEqualTo(time);
+        assertThat(again.get("atendida_por").asText()).isEqualTo("cel-1");
         assertThat(call(get("/api/alertas").param("estanque_id", pond), 200)).isEmpty();
     }
 
@@ -368,6 +375,42 @@ class ApiTest {
                 .header("Origin", "https://otro-sitio.com")
                 .header("Access-Control-Request-Method", "GET")).andReturn();
         assertThat(foreign.getResponse().getStatus()).isEqualTo(403);
+    }
+
+    @Test
+    void closingDateFollowsTheBatchStatus() throws Exception {
+        String[] cat = createCatalog();
+        String today = LocalDate.now(ZoneId.of("America/Bogota")).toString();
+
+        // Closed from the phone, which does not send a closing date: it closes today
+        push(obj("lotes", List.of(obj("id", cat[1], "estanque_id", cat[0], "codigo", "L12", "estado", "cerrado",
+                "actualizado_en", minutesAgo(60)))));
+        assertThat(call(get("/api/lotes/" + cat[1]), 200).get("fecha_cierre").asText()).isEqualTo(today);
+
+        // The panel corrects the date; a later phone edit without a date keeps it
+        call(patch("/api/lotes/" + cat[1]).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"fecha_cierre\":\"2026-01-15\"}"), 200);
+        push(obj("lotes", List.of(obj("id", cat[1], "estanque_id", cat[0], "codigo", "L12-B", "estado", "cerrado",
+                "actualizado_en", Instant.now().toString()))));
+        assertThat(call(get("/api/lotes/" + cat[1]), 200).get("fecha_cierre").asText()).isEqualTo("2026-01-15");
+
+        // Reopening clears it
+        JsonNode reopened = call(patch("/api/lotes/" + cat[1]).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"estado\":\"activo\"}"), 200);
+        assertThat(reopened.get("fecha_cierre").isNull()).isTrue();
+    }
+
+    @Test
+    void closingBeforeStockingIsRejected() throws Exception {
+        String pond = createCatalog()[0];
+        JsonNode e = call(post("/api/lotes").contentType(MediaType.APPLICATION_JSON).content("{\"estanque_id\":\"" + pond
+                + "\",\"codigo\":\"LX\",\"fecha_siembra\":\"2026-03-01\",\"estado\":\"cerrado\",\"fecha_cierre\":\"2026-02-01\"}"), 422);
+        assertThat(e.get("detalle").asText()).isEqualTo("fecha_cierre: no puede ser anterior a la fecha de siembra");
+
+        String batch = newId();
+        JsonNode r = push(obj("lotes", List.of(obj("id", batch, "estanque_id", pond, "codigo", "LY", "fecha_siembra", "2026-03-01",
+                "estado", "cerrado", "fecha_cierre", "2026-02-01", "actualizado_en", minutesAgo(5)))));
+        assertThat(r.get("rechazados").get(0).get("id").asText()).isEqualTo(batch);
     }
 
     @Test

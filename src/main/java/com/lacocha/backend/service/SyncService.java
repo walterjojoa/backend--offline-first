@@ -156,6 +156,11 @@ public class SyncService {
                 result.rejected.add(new Rejection(b.id().toString(), "actualizado_en: " + error));
                 continue;
             }
+            error = CatalogService.closingError(b.stockingDate(), "cerrado".equals(b.status()) ? b.closingDate() : null);
+            if (error != null) {
+                result.rejected.add(new Rejection(b.id().toString(), error));
+                continue;
+            }
             if (!ponds.existsById(b.pondId())) {
                 result.rejected.add(new Rejection(b.id().toString(), "estanque_id: el estanque no existe"));
                 continue;
@@ -179,6 +184,10 @@ public class SyncService {
             current.setInitialQuantity(b.initialQuantity());
             current.setInitialWeightG(b.initialWeightG());
             current.setStatus(b.status() != null ? b.status() : "activo");
+            // A phone that does not know about the closing date sends none: the one already saved is kept
+            if (b.closingDate() != null) {
+                current.setClosingDate(b.closingDate());
+            }
             CatalogService.adjustClosing(current);
             current.setUpdatedAt(b.updatedAt().toInstant());
             if (isNew) {
