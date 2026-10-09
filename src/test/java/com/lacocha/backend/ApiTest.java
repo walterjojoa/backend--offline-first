@@ -259,5 +259,8 @@ class ApiTest {
 
         JsonNode activos = llamar(get("/api/lotes").param("estanque_id", cat[0]).param("estado", "activo"), 200);
         assertThat(activos).extracting(n -> n.get("id").asText()).containsExactly(cat[1]);
+
+        JsonNode error = llamar(get("/api/lotes").param("estado", "vendido"), 400);
+        assertThat(error.get("detalle").asText()).isEqualTo("estado: debe ser activo o cerrado");
     }
 }

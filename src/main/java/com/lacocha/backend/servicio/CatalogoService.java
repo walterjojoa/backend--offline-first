@@ -69,6 +69,9 @@ public class CatalogoService {
 
     @Transactional(readOnly = true)
     public List<LoteSalida> listarLotes(UUID estanqueId, String estado) {
+        if (estado != null && !estado.equals("activo") && !estado.equals("cerrado")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "estado: debe ser activo o cerrado");
+        }
         // Filtra en la base de datos en vez de traer todos los lotes a memoria
         StringBuilder jpql = new StringBuilder("select l from Lote l where 1 = 1");
         if (estanqueId != null) jpql.append(" and l.estanqueId = :estanque");
