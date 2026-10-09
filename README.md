@@ -64,6 +64,8 @@ El celular borra de su cola todo lo que salga en cualquiera de esas listas.
 - **Un evento malo no frena la cola:** se rechaza solo ese y los demás se guardan.
 - **Estanques y lotes** sí se editan: gana el `actualizado_en` más reciente; el cambio viejo sale en `obsoletos`.
 - **Máximo** 500 eventos por envío.
+- **Fechas:** se rechazan las que están más de 1 día en el futuro o antes de 2024 (reloj sin configurar).
+- **Alertas:** si ya hay una alerta pendiente igual (mismo estanque, variable y nivel), una lectura repetida no crea otra.
 
 `GET /api/sync/pull?desde=<servidor_en anterior>` devuelve estanques y lotes cambiados desde
 el último pull y las alertas pendientes. El cursor es la hora del servidor, no la del celular,
@@ -74,14 +76,29 @@ para que un celular con el reloj atrasado no se pierda cambios.
 | Método | Ruta | Para qué |
 |---|---|---|
 | GET/POST | `/api/estanques` | Listar / crear estanques |
-| PATCH | `/api/estanques/{id}` | Editar estanque |
+| GET/PATCH | `/api/estanques/{id}` | Ver / editar estanque |
 | GET/POST | `/api/lotes` | Listar (filtros `estanque_id`, `estado`) / crear lotes |
-| PATCH | `/api/lotes/{id}` | Editar lote |
+| GET/PATCH | `/api/lotes/{id}` | Ver / editar lote |
 | GET | `/api/estanques/{id}/lecturas` | Historial de pH y temperatura (`desde`, `hasta`, `limite`) |
-| GET | `/api/lotes/{id}/resumen` | Población, supervivencia, biomasa y ración sugerida |
+| GET | `/api/estanques/{id}/lecturas/diario` | Mínimo, máximo y promedio por día (`dias`, por defecto 7) |
+| GET | `/api/estanques/{id}/lecturas.csv` | Descargar las lecturas en CSV (`desde`, `hasta`) |
+| GET | `/api/lotes/{id}/resumen` | Días de cultivo, población, supervivencia, biomasa, densidad, ración y conversión alimenticia |
+| GET | `/api/lotes/{id}/conteos` | Historial de conteos (`limite`) |
+| GET | `/api/lotes/{id}/mortalidades` | Historial de mortalidad (`limite`) |
+| GET | `/api/lotes/{id}/alimentaciones` | Historial de alimentación (`limite`) |
+| GET | `/api/lotes/{id}/biometrias` | Historial de biometrías (`limite`) |
 | GET | `/api/alertas` | Alertas (`pendientes`, `estanque_id`) |
-| POST | `/api/alertas/{id}/atender` | Marcar alerta como atendida |
-| GET | `/salud` | Chequeo de Render (sin clave) |
+| POST | `/api/alertas/{id}/atender` | Marcar alerta como atendida (guarda `atendida_en`) |
+| GET | `/salud` | Chequeo de Render y versión desplegada (sin clave) |
+
+Todos los errores salen como `{"detalle": "..."}` con los nombres de campo igual que en el JSON.
+
+### Resumen del lote
+
+- **Población:** último conteo menos las muertes registradas después de ese conteo.
+- **Densidad (kg/m³):** biomasa entre el volumen del estanque (`volumen_m3`).
+- **Conversión alimenticia (FCA):** kg de alimento total entre kg de biomasa ganada desde la siembra.
+- **Días de cultivo:** desde `fecha_siembra` hasta hoy (hora de Colombia).
 
 Los umbrales y la tabla de alimentación están en `servicio/Reglas.java`. Son **valores de referencia**:
 hay que ajustarlos con el productor y citarlos de AUNAP/FAO y del fabricante del alimento.
@@ -99,9 +116,15 @@ Render no tiene Java nativo, por eso se despliega con el `Dockerfile` incluido.
    - `API_KEY` = una clave larga (la usará la app)
    - `ALLOWED_ORIGINS` = la URL del panel web, o `http://localhost:5173` por ahora
 5. **Apply**. La primera compilación tarda unos minutos. Al terminar abre
-   `https://<tu-servicio>.onrender.com/salud` → debe decir `{"estado":"ok"}`.
+   `https://<tu-servicio>.onrender.com/salud` → debe decir `{"estado":"ok","version":"…"}`.
 
-Las tablas se crean solas al arrancar (Flyway).
+Las tablas se crean solas al arrancar (Flyway, carpeta `db/migration`).
 
 Nota: en el plan gratis Render apaga el servicio tras 15 min sin uso y el primer envío tarda
 ~1 minuto en despertarlo. La app debe tener un tiempo de espera largo en el primer intento.
+
+## Pruebas automáticas
+
+`.\mvnw test` corre las pruebas de la API (con H2 en memoria) y las unitarias de las reglas,
+las fechas y la configuración. GitHub Actions las corre en cada push a `main`
+(pestaña **Actions** del repositorio).
