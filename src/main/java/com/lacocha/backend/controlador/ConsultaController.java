@@ -119,6 +119,7 @@ public class ConsultaController {
     }
 
     @GetMapping("/alertas")
+    @Operation(summary = "Listar alertas (por defecto solo las pendientes)")
     public List<AlertaSalida> alertas(
             @RequestParam(defaultValue = "true") boolean pendientes,
             @RequestParam(name = "estanque_id", required = false) UUID estanqueId,
@@ -127,6 +128,7 @@ public class ConsultaController {
     }
 
     @PostMapping("/alertas/{id}/atender")
+    @Operation(summary = "Marcar una alerta como atendida")
     public AlertaSalida atender(@PathVariable UUID id) {
         return servicio.atenderAlerta(id);
     }

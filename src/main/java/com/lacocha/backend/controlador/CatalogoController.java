@@ -22,6 +22,7 @@ import com.lacocha.backend.dto.Catalogo.LoteEditar;
 import com.lacocha.backend.dto.Catalogo.LoteSalida;
 import com.lacocha.backend.servicio.CatalogoService;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
@@ -37,27 +38,32 @@ public class CatalogoController {
     }
 
     @GetMapping("/estanques")
+    @Operation(summary = "Listar estanques ordenados por nombre")
     public List<EstanqueSalida> listarEstanques() {
         return servicio.listarEstanques();
     }
 
     @GetMapping("/estanques/{id}")
+    @Operation(summary = "Ver un estanque")
     public EstanqueSalida obtenerEstanque(@PathVariable UUID id) {
         return servicio.obtenerEstanque(id);
     }
 
     @PostMapping("/estanques")
+    @Operation(summary = "Crear un estanque desde el panel (el id es opcional)")
     @ResponseStatus(HttpStatus.CREATED)
     public EstanqueSalida crearEstanque(@Valid @RequestBody EstanqueCrear datos) {
         return servicio.crearEstanque(datos);
     }
 
     @PatchMapping("/estanques/{id}")
+    @Operation(summary = "Editar un estanque: solo cambian los campos enviados")
     public EstanqueSalida editarEstanque(@PathVariable UUID id, @Valid @RequestBody EstanqueEditar datos) {
         return servicio.editarEstanque(id, datos);
     }
 
     @GetMapping("/lotes")
+    @Operation(summary = "Listar lotes, con filtros opcionales por estanque y estado")
     public List<LoteSalida> listarLotes(
             @RequestParam(name = "estanque_id", required = false) UUID estanqueId,
             @RequestParam(required = false) String estado) {
@@ -65,17 +71,20 @@ public class CatalogoController {
     }
 
     @GetMapping("/lotes/{id}")
+    @Operation(summary = "Ver un lote")
     public LoteSalida obtenerLote(@PathVariable UUID id) {
         return servicio.obtenerLote(id);
     }
 
     @PostMapping("/lotes")
+    @Operation(summary = "Crear un lote en un estanque existente")
     @ResponseStatus(HttpStatus.CREATED)
     public LoteSalida crearLote(@Valid @RequestBody LoteCrear datos) {
         return servicio.crearLote(datos);
     }
 
     @PatchMapping("/lotes/{id}")
+    @Operation(summary = "Editar un lote (por ejemplo, cerrarlo con estado = cerrado)")
     public LoteSalida editarLote(@PathVariable UUID id, @Valid @RequestBody LoteEditar datos) {
         return servicio.editarLote(id, datos);
     }
