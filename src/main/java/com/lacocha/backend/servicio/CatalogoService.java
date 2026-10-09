@@ -43,6 +43,9 @@ public class CatalogoService {
 
     @Transactional
     public EstanqueSalida crearEstanque(EstanqueCrear datos) {
+        if (datos.id() != null && estanques.existsById(datos.id())) {
+            throw yaExiste("El estanque");
+        }
         Estanque e = new Estanque();
         e.setId(datos.id() != null ? datos.id() : UUID.randomUUID());
         e.setNombre(datos.nombre());
@@ -89,6 +92,9 @@ public class CatalogoService {
         if (!estanques.existsById(datos.estanqueId())) {
             throw noExiste("El estanque");
         }
+        if (datos.id() != null && lotes.existsById(datos.id())) {
+            throw yaExiste("El lote");
+        }
         Lote l = new Lote();
         l.setId(datos.id() != null ? datos.id() : UUID.randomUUID());
         l.setEstanqueId(datos.estanqueId());
@@ -115,6 +121,10 @@ public class CatalogoService {
         l.setActualizadoEn(Instant.now());
         lotes.flush();
         return LoteSalida.de(l);
+    }
+
+    static ResponseStatusException yaExiste(String que) {
+        return new ResponseStatusException(HttpStatus.CONFLICT, que + " ya existe con ese id");
     }
 
     static ResponseStatusException noExiste(String que) {

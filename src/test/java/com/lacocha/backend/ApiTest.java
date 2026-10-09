@@ -263,4 +263,15 @@ class ApiTest {
         JsonNode error = llamar(get("/api/lotes").param("estado", "vendido"), 400);
         assertThat(error.get("detalle").asText()).isEqualTo("estado: debe ser activo o cerrado");
     }
+
+    @Test
+    void crearConIdRepetidoDa409() throws Exception {
+        String[] cat = crearCatalogo();
+        JsonNode e = llamar(post("/api/estanques").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"id\":\"" + cat[0] + "\",\"nombre\":\"Otro\"}"), 409);
+        assertThat(e.get("detalle").asText()).isEqualTo("El estanque ya existe con ese id");
+
+        llamar(post("/api/lotes").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"id\":\"" + cat[1] + "\",\"estanque_id\":\"" + cat[0] + "\",\"codigo\":\"X\"}"), 409);
+    }
 }
