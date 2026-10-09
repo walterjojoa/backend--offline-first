@@ -236,6 +236,35 @@ class ApiTest {
     }
 
     @Test
+    void devicesAreRegisteredLoggedAndCanBeDeactivated() throws Exception {
+        String device = "cel-" + newId().substring(0, 8);
+        String pond = createCatalog()[0];
+        Map<String, Object> reading = obj("tipo", "lectura_agua", "id", newId(), "estanque_id", pond, "temp_c", 12.0,
+                "registrado_en", minutesAgo(1));
+        // The same reading twice: the second one is a retry and counts as a duplicate
+        String body = mapper.writeValueAsString(obj("dispositivo_id", device, "eventos", List.of(reading, reading)));
+        call(post("/api/sync/push").contentType(MediaType.APPLICATION_JSON).content(body), 200);
+
+        JsonNode devices = call(get("/api/dispositivos"), 200);
+        assertThat(devices).anySatisfy(d -> {
+            assertThat(d.get("id").asText()).isEqualTo(device);
+            assertThat(d.get("activo").asBoolean()).isTrue();
+        });
+        JsonNode log = call(get("/api/sincronizaciones").param("dispositivo_id", device), 200);
+        assertThat(log).singleElement().satisfies(l -> {
+            assertThat(l.get("aceptados").asInt()).isEqualTo(1);
+            assertThat(l.get("duplicados").asInt()).isEqualTo(1);
+        });
+
+        JsonNode updated = call(patch("/api/dispositivos/" + device).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"descripcion\":\"Celular de prueba\",\"activo\":false}"), 200);
+        assertThat(updated.get("descripcion").asText()).isEqualTo("Celular de prueba");
+        JsonNode refused = call(post("/api/sync/push").contentType(MediaType.APPLICATION_JSON).content(body), 403);
+        assertThat(refused.get("detalle").asText()).contains("dado de baja");
+        call(patch("/api/dispositivos/no-existe").contentType(MediaType.APPLICATION_JSON).content("{\"activo\":true}"), 404);
+    }
+
+    @Test
     void futureDateIsRejected() throws Exception {
         String batch = createCatalog()[1];
         String future = Instant.now().plus(Duration.ofDays(3)).toString();

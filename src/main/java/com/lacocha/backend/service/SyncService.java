@@ -38,6 +38,7 @@ import com.lacocha.backend.model.Device;
 import com.lacocha.backend.model.Event;
 import com.lacocha.backend.model.Pond;
 import com.lacocha.backend.model.ServerClock;
+import com.lacocha.backend.model.SyncLog;
 import com.lacocha.backend.repository.AlertRepository;
 import com.lacocha.backend.repository.BatchRepository;
 import com.lacocha.backend.repository.DeviceRepository;
@@ -225,6 +226,7 @@ public class SyncService {
             }
         }
 
+        writeSyncLog(request.deviceId(), result, serverTime);
         log.info("push from {}: {} accepted, {} duplicates, {} stale, {} rejected, {} alerts",
                 request.deviceId(), result.accepted.size(), result.duplicates.size(), result.stale.size(),
                 result.rejected.size(), result.alertsCreated);
@@ -251,6 +253,22 @@ public class SyncService {
             device.setLastSeenAt(now);
         }
         em.flush();
+    }
+
+    /**
+     * Keeps on the server the counts the phone receives. Inside the push transaction on purpose:
+     * if the push rolls back, it must not look as if it had arrived.
+     */
+    private void writeSyncLog(String deviceId, PushResult result, Instant serverTime) {
+        SyncLog entry = new SyncLog();
+        entry.setDeviceId(deviceId);
+        entry.setAccepted(result.accepted.size());
+        entry.setDuplicates(result.duplicates.size());
+        entry.setStale(result.stale.size());
+        entry.setRejected(result.rejected.size());
+        entry.setAlertsCreated(result.alertsCreated);
+        entry.setServerTime(serverTime);
+        em.persist(entry);
     }
 
     /** Runs the expert system on a reading and stores the alerts. Returns how many were created. */
