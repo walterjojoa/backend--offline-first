@@ -31,7 +31,7 @@ public class Lote {
     @PrePersist
     @PreUpdate
     void marcarServidor() {
-        servidorEn = Instant.now();
+        servidorEn = Reloj.ahora();
     }
 
     public UUID getId() { return id; }

@@ -33,6 +33,7 @@ import com.lacocha.backend.modelo.Alerta;
 import com.lacocha.backend.modelo.Estanque;
 import com.lacocha.backend.modelo.Evento;
 import com.lacocha.backend.modelo.Lote;
+import com.lacocha.backend.modelo.Reloj;
 import com.lacocha.backend.repositorio.AlertaRepository;
 import com.lacocha.backend.repositorio.EstanqueRepository;
 import com.lacocha.backend.repositorio.LoteRepository;
@@ -87,7 +88,7 @@ public class SyncService {
 
     @Transactional
     public PushRespuesta push(PushPeticion peticion) {
-        Instant servidorEn = Instant.now();
+        Instant servidorEn = Reloj.ahora();
         Resultado r = new Resultado();
 
         for (EstanqueSync e : lista(peticion.estanques())) {
@@ -208,7 +209,7 @@ public class SyncService {
     /** desde es el servidor_en que devolvió el pull anterior. Sin él, baja todo. */
     @Transactional(readOnly = true)
     public PullRespuesta pull(Instant desde) {
-        Instant servidorEn = Instant.now();
+        Instant servidorEn = Reloj.ahora();
         List<Estanque> listaEstanques = desde == null ? estanques.findAll() : estanques.findByServidorEnAfter(desde);
         List<Lote> listaLotes = desde == null ? lotes.findAll() : lotes.findByServidorEnAfter(desde);
         return new PullRespuesta(

@@ -21,7 +21,7 @@ public class Alerta {
     private String nivel; // advertencia | critica
     private String mensaje;
     private Instant medidoEn;
-    private Instant creadaEn = Instant.now();
+    private Instant creadaEn = Reloj.ahora();
     private boolean atendida = false;
 
     public UUID getId() { return id; }
