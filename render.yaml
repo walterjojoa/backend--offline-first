@@ -6,7 +6,7 @@ services:
     dockerfilePath: ./Dockerfile
     healthCheckPath: /salud
     envVars:
-      # Se llenan a mano en el panel de Render (sync: false) para que un push no los sobrescriba
+      # Filled in by hand in the Render dashboard (sync: false) so a push does not overwrite them
       - key: DATABASE_URL
         sync: false
       - key: API_KEY

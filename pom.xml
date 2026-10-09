@@ -71,7 +71,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <executions>
-                    <!-- Genera META-INF/build-info.properties: versión y hora de compilación para /salud y /docs -->
+                    <!-- Generates META-INF/build-info.properties: version and build time for /salud and /docs -->
                     <execution>
                         <goals>
                             <goal>build-info</goal>
@@ -79,7 +79,7 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <!-- spring-boot:run usa el perfil local: base H2 en archivo y clave de desarrollo -->
+                    <!-- spring-boot:run uses the local profile: file-based H2 database and development key -->
                     <profiles>
                         <profile>local</profile>
                     </profiles>
