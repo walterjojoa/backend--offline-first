@@ -316,4 +316,14 @@ class ApiTest {
         assertThat(r.get(0).get("causa").asText()).isEqualTo("hongos");
         assertThat(r.get(0).get("origen").asText()).isEqualTo("voz");
     }
+
+    @Test
+    void historialDeAlimentacion() throws Exception {
+        String lote = crearCatalogo()[1];
+        pushEventos(
+                mapa("tipo", "alimentacion", "id", nuevoId(), "lote_id", lote, "kg", 0.4, "registrado_en", hace(300)),
+                mapa("tipo", "alimentacion", "id", nuevoId(), "lote_id", lote, "kg", 0.6, "registrado_en", hace(30)));
+        JsonNode r = llamar(get("/api/lotes/" + lote + "/alimentaciones").param("limite", "1"), 200);
+        assertThat(r).extracting(n -> n.get("kg").asDouble()).containsExactly(0.6);
+    }
 }

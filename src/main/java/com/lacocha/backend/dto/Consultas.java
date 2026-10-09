@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 import com.lacocha.backend.modelo.Mortalidad;
+import com.lacocha.backend.modelo.Alimentacion;
 import com.lacocha.backend.modelo.Conteo;
 import com.lacocha.backend.modelo.LecturaAgua;
 
@@ -37,6 +38,15 @@ public final class Consultas {
         public static MortalidadSalida de(Mortalidad m) {
             return new MortalidadSalida(m.getId(), m.getLoteId(), m.getCantidad(), m.getCausa(), m.getOrigen(),
                     m.getDispositivoId(), m.getRegistradoEn());
+        }
+    }
+
+    public record AlimentacionSalida(UUID id, UUID loteId, Double kg, String origen,
+            String dispositivoId, Instant registradoEn) {
+
+        public static AlimentacionSalida de(Alimentacion a) {
+            return new AlimentacionSalida(a.getId(), a.getLoteId(), a.getKg(), a.getOrigen(),
+                    a.getDispositivoId(), a.getRegistradoEn());
         }
     }
 

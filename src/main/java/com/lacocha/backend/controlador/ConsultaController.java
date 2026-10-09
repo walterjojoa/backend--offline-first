@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.lacocha.backend.dto.Consultas.ConteoSalida;
+import com.lacocha.backend.dto.Consultas.AlimentacionSalida;
 import com.lacocha.backend.dto.Consultas.MortalidadSalida;
 import com.lacocha.backend.dto.Consultas.LecturaAguaSalida;
 import com.lacocha.backend.dto.Consultas.ResumenLote;
@@ -56,6 +57,12 @@ public class ConsultaController {
     @Operation(summary = "Historial de mortalidad del lote")
     public List<MortalidadSalida> mortalidades(@PathVariable UUID id, @RequestParam(defaultValue = "100") int limite) {
         return servicio.mortalidadesLote(id, limite);
+    }
+
+    @GetMapping("/lotes/{id}/alimentaciones")
+    @Operation(summary = "Historial de alimentación del lote")
+    public List<AlimentacionSalida> alimentaciones(@PathVariable UUID id, @RequestParam(defaultValue = "100") int limite) {
+        return servicio.alimentacionesLote(id, limite);
     }
 
     @GetMapping("/lotes/{id}/resumen")
