@@ -12,4 +12,7 @@ public interface PondRepository extends JpaRepository<Pond, UUID> {
     List<Pond> findAllByOrderByNameAsc();
 
     List<Pond> findByServerTimeAfter(Instant since);
+
+    /** The name is unique in the database (uq_estanques_nombre). */
+    boolean existsByNameAndIdNot(String name, UUID id);
 }

@@ -10,4 +10,7 @@ import com.lacocha.backend.model.Batch;
 public interface BatchRepository extends JpaRepository<Batch, UUID> {
 
     List<Batch> findByServerTimeAfter(Instant since);
+
+    /** The code is unique inside each pond (uq_lotes_estanque_codigo). */
+    boolean existsByPondIdAndCodeAndIdNot(UUID pondId, String code, UUID id);
 }

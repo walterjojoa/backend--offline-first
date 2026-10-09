@@ -1,5 +1,6 @@
 package com.lacocha.backend.service;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -54,6 +55,7 @@ public class CatalogService {
         }
         Pond pond = new Pond();
         pond.setId(data.id() != null ? data.id() : UUID.randomUUID());
+        requireFreeName(pond.getId(), data.name());
         pond.setName(data.name());
         if (data.type() != null) {
             pond.setType(data.type());
@@ -67,7 +69,10 @@ public class CatalogService {
     @Transactional
     public PondResponse updatePond(UUID id, PondUpdate data) {
         Pond pond = ponds.findById(id).orElseThrow(() -> notFound("El estanque"));
-        if (data.name() != null) pond.setName(data.name());
+        if (data.name() != null) {
+            requireFreeName(id, data.name());
+            pond.setName(data.name());
+        }
         if (data.type() != null) pond.setType(data.type());
         if (data.volumeM3() != null) pond.setVolumeM3(data.volumeM3());
         if (data.active() != null) pond.setActive(data.active());
@@ -108,6 +113,7 @@ public class CatalogService {
         }
         Batch batch = new Batch();
         batch.setId(data.id() != null ? data.id() : UUID.randomUUID());
+        requireFreeCode(batch.getId(), data.pondId(), data.code());
         batch.setPondId(data.pondId());
         batch.setCode(data.code());
         batch.setStockingDate(data.stockingDate());
@@ -116,6 +122,7 @@ public class CatalogService {
         if (data.status() != null) {
             batch.setStatus(data.status());
         }
+        adjustClosing(batch);
         batch.setUpdatedAt(ServerClock.now());
         em.persist(batch);
         return BatchResponse.from(batch);
@@ -124,14 +131,48 @@ public class CatalogService {
     @Transactional
     public BatchResponse updateBatch(UUID id, BatchUpdate data) {
         Batch batch = batches.findById(id).orElseThrow(() -> notFound("El lote"));
-        if (data.code() != null) batch.setCode(data.code());
+        if (data.code() != null) {
+            requireFreeCode(id, batch.getPondId(), data.code());
+            batch.setCode(data.code());
+        }
         if (data.stockingDate() != null) batch.setStockingDate(data.stockingDate());
         if (data.initialQuantity() != null) batch.setInitialQuantity(data.initialQuantity());
         if (data.initialWeightG() != null) batch.setInitialWeightG(data.initialWeightG());
         if (data.status() != null) batch.setStatus(data.status());
+        adjustClosing(batch);
         batch.setUpdatedAt(ServerClock.now());
         batches.flush();
         return BatchResponse.from(batch);
+    }
+
+    static final String NAME_TAKEN = "ya existe otro estanque con ese nombre";
+    static final String CODE_TAKEN = "ya existe otro lote con ese código en el estanque";
+
+    private void requireFreeName(UUID pondId, String name) {
+        if (ponds.existsByNameAndIdNot(name, pondId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "nombre: " + NAME_TAKEN);
+        }
+    }
+
+    private void requireFreeCode(UUID batchId, UUID pondId, String code) {
+        if (batches.existsByPondIdAndCodeAndIdNot(pondId, code, batchId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "codigo: " + CODE_TAKEN);
+        }
+    }
+
+    /**
+     * The database requires a closed batch to have a closing date and an active one not to have it.
+     * Closing without a date means "closed today" (farm time, never before the stocking date);
+     * reopening a batch means the closing date no longer applies.
+     */
+    static void adjustClosing(Batch batch) {
+        if (!"cerrado".equals(batch.getStatus())) {
+            batch.setClosingDate(null);
+        } else if (batch.getClosingDate() == null) {
+            LocalDate today = LocalDate.now(Dates.FARM_ZONE);
+            LocalDate stocking = batch.getStockingDate();
+            batch.setClosingDate(stocking != null && stocking.isAfter(today) ? stocking : today);
+        }
     }
 
     /** what is the Spanish subject shown to the user, e.g. "El lote". */

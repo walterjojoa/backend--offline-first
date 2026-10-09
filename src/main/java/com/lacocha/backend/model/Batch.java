@@ -30,6 +30,9 @@ public class Batch {
     private Double initialWeightG;
     @Column(name = "estado")
     private String status = "activo"; // activo | cerrado
+    /** Harvest date. The database requires it when the batch is closed, and forbids it while it is active. */
+    @Column(name = "fecha_cierre")
+    private LocalDate closingDate;
     @Column(name = "actualizado_en")
     private Instant updatedAt;
     @Column(name = "servidor_en")
@@ -55,6 +58,8 @@ public class Batch {
     public void setInitialWeightG(Double initialWeightG) { this.initialWeightG = initialWeightG; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public LocalDate getClosingDate() { return closingDate; }
+    public void setClosingDate(LocalDate closingDate) { this.closingDate = closingDate; }
     public Instant getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
     public Instant getServerTime() { return serverTime; }

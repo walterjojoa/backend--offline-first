@@ -3,6 +3,7 @@ package com.lacocha.backend;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
@@ -78,12 +79,17 @@ class ApiTest {
         return push(obj("eventos", List.of(events)));
     }
 
+    /** Pond names are unique in the database: every test pond gets its own. */
+    static String pondName(String pondId) {
+        return "Tanque " + pondId.substring(0, 8);
+    }
+
     /** Creates a pond and a batch of 5000 fry of 2 g. Returns {pond, batch}. */
     String[] createCatalog() throws Exception {
         String pond = newId();
         String batch = newId();
         push(obj(
-                "estanques", List.of(obj("id", pond, "nombre", "Tanque 1", "tipo", "tanque", "actualizado_en", minutesAgo(120))),
+                "estanques", List.of(obj("id", pond, "nombre", pondName(pond), "tipo", "tanque", "actualizado_en", minutesAgo(120))),
                 "lotes", List.of(obj("id", batch, "estanque_id", pond, "codigo", "L12", "cantidad_inicial", 5000,
                         "peso_inicial_g", 2.0, "actualizado_en", minutesAgo(120)))));
         return new String[] {pond, batch};
@@ -178,6 +184,41 @@ class ApiTest {
         assertThat(rejected.get(noName)).startsWith("nombre:");
         assertThat(rejected.get(textVolume)).isEqualTo("volumen_m3: formato no válido");
         assertThat(rejected.get(longCode)).startsWith("codigo:");
+    }
+
+    @Test
+    void repeatedPondNameOrBatchCodeIsRejectedAlone() throws Exception {
+        String[] cat = createCatalog();
+        String samePondName = newId();
+        String sameCode = newId();
+        String sameCodeOtherPond = newId();
+        String otherPond = newId();
+        JsonNode r = push(obj(
+                "estanques", List.of(
+                        obj("id", samePondName, "nombre", pondName(cat[0]), "actualizado_en", minutesAgo(5)),
+                        obj("id", otherPond, "nombre", pondName(otherPond), "actualizado_en", minutesAgo(5))),
+                "lotes", List.of(
+                        obj("id", sameCode, "estanque_id", cat[0], "codigo", "L12", "actualizado_en", minutesAgo(5)),
+                        // The code only has to be unique inside its own pond
+                        obj("id", sameCodeOtherPond, "estanque_id", otherPond, "codigo", "L12", "actualizado_en", minutesAgo(5)))));
+
+        assertThat(texts(r.get("aceptados"))).containsExactlyInAnyOrder(otherPond, sameCodeOtherPond);
+        Map<String, String> rejected = new HashMap<>();
+        r.get("rechazados").forEach(x -> rejected.put(x.get("id").asText(), x.get("error").asText()));
+        assertThat(rejected).containsOnlyKeys(samePondName, sameCode);
+        assertThat(rejected.get(samePondName)).isEqualTo("nombre: ya existe otro estanque con ese nombre");
+        assertThat(rejected.get(sameCode)).isEqualTo("codigo: ya existe otro lote con ese código en el estanque");
+    }
+
+    @Test
+    void panelGets409ForARepeatedPondName() throws Exception {
+        String[] cat = createCatalog();
+        JsonNode e = call(post("/api/estanques").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"nombre\":\"" + pondName(cat[0]) + "\"}"), 409);
+        assertThat(e.get("detalle").asText()).isEqualTo("nombre: ya existe otro estanque con ese nombre");
+        // Saving a pond with its own name is not a clash
+        call(patch("/api/estanques/" + cat[0]).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"nombre\":\"" + pondName(cat[0]) + "\",\"volumen_m3\":3}"), 200);
     }
 
     @Test
@@ -326,7 +367,7 @@ class ApiTest {
     @Test
     void getPondAndBatchById() throws Exception {
         String[] cat = createCatalog();
-        assertThat(call(get("/api/estanques/" + cat[0]), 200).get("nombre").asText()).isEqualTo("Tanque 1");
+        assertThat(call(get("/api/estanques/" + cat[0]), 200).get("nombre").asText()).isEqualTo(pondName(cat[0]));
         assertThat(call(get("/api/lotes/" + cat[1]), 200).get("codigo").asText()).isEqualTo("L12");
         assertThat(call(get("/api/lotes/" + newId()), 404).get("detalle").asText()).isEqualTo("El lote no existe");
     }

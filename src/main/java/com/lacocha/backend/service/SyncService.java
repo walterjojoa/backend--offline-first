@@ -10,8 +10,10 @@ import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -32,11 +34,13 @@ import com.lacocha.backend.dto.Sync.PushResponse;
 import com.lacocha.backend.dto.Sync.Rejection;
 import com.lacocha.backend.model.Alert;
 import com.lacocha.backend.model.Batch;
+import com.lacocha.backend.model.Device;
 import com.lacocha.backend.model.Event;
 import com.lacocha.backend.model.Pond;
 import com.lacocha.backend.model.ServerClock;
 import com.lacocha.backend.repository.AlertRepository;
 import com.lacocha.backend.repository.BatchRepository;
+import com.lacocha.backend.repository.DeviceRepository;
 import com.lacocha.backend.repository.PondRepository;
 
 import jakarta.persistence.EntityManager;
@@ -59,15 +63,17 @@ public class SyncService {
     private final PondRepository ponds;
     private final BatchRepository batches;
     private final AlertRepository alerts;
+    private final DeviceRepository devices;
     private final ObjectMapper mapper;
     private final Validator validator;
 
     public SyncService(EntityManager em, PondRepository ponds, BatchRepository batches,
-            AlertRepository alerts, ObjectMapper mapper, Validator validator) {
+            AlertRepository alerts, DeviceRepository devices, ObjectMapper mapper, Validator validator) {
         this.em = em;
         this.ponds = ponds;
         this.batches = batches;
         this.alerts = alerts;
+        this.devices = devices;
         this.mapper = mapper;
         this.validator = validator;
     }
@@ -92,6 +98,7 @@ public class SyncService {
     public PushResponse push(PushRequest request) {
         Instant serverTime = ServerClock.now();
         PushResult result = new PushResult();
+        registerDevice(request.deviceId(), serverTime);
 
         for (JsonNode raw : orEmpty(request.ponds())) {
             PondSync p;
@@ -113,6 +120,11 @@ public class SyncService {
                 current.setId(p.id());
             } else if (!p.updatedAt().toInstant().isAfter(current.getUpdatedAt())) {
                 result.stale.add(p.id());
+                continue;
+            }
+            // Caught here and not by the database: a unique violation would roll back the whole push
+            if (ponds.existsByNameAndIdNot(p.name(), p.id())) {
+                result.rejected.add(new Rejection(p.id().toString(), "nombre: " + CatalogService.NAME_TAKEN));
                 continue;
             }
             current.setName(p.name());
@@ -153,12 +165,17 @@ public class SyncService {
                 result.stale.add(b.id());
                 continue;
             }
+            if (batches.existsByPondIdAndCodeAndIdNot(b.pondId(), b.code(), b.id())) {
+                result.rejected.add(new Rejection(b.id().toString(), "codigo: " + CatalogService.CODE_TAKEN));
+                continue;
+            }
             current.setPondId(b.pondId());
             current.setCode(b.code());
             current.setStockingDate(b.stockingDate());
             current.setInitialQuantity(b.initialQuantity());
             current.setInitialWeightG(b.initialWeightG());
             current.setStatus(b.status() != null ? b.status() : "activo");
+            CatalogService.adjustClosing(current);
             current.setUpdatedAt(b.updatedAt().toInstant());
             if (isNew) {
                 em.persist(current);
@@ -210,6 +227,27 @@ public class SyncService {
                 result.rejected.size(), result.alertsCreated);
         return new PushResponse(result.accepted, result.duplicates, result.stale, result.rejected,
                 result.alertsCreated, serverTime);
+    }
+
+    /**
+     * Records the phone (or ESP32 node) that is syncing and when it was last seen. It goes before the
+     * events because dispositivo_id is a foreign key: the device row must exist before they are saved.
+     */
+    private void registerDevice(String id, Instant now) {
+        Device device = devices.findById(id).orElse(null);
+        if (device == null) {
+            device = new Device();
+            device.setId(id);
+            device.setFirstSeenAt(now);
+            device.setLastSeenAt(now);
+            em.persist(device);
+        } else if (!device.isActive()) {
+            // A lost or stolen phone must not keep writing: the whole push is refused
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "El dispositivo " + id + " está dado de baja");
+        } else {
+            device.setLastSeenAt(now);
+        }
+        em.flush();
     }
 
     /** Runs the expert system on a reading and stores the alerts. Returns how many were created. */
