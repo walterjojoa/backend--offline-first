@@ -13,6 +13,7 @@ import com.lacocha.backend.modelo.Alerta;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public final class Sync {
@@ -21,7 +22,9 @@ public final class Sync {
     }
 
     public record PushPeticion(
-            @NotBlank @Size(max = 64) String dispositivoId,
+            // Letras, números, guion, guion bajo y punto: el id queda limpio en los registros y en el log
+            @NotBlank @Size(max = 64) @Pattern(regexp = "[A-Za-z0-9._-]+",
+                    message = "solo letras, números, punto, guion y guion bajo") String dispositivoId,
             @Valid @Size(max = 200) List<EstanqueSync> estanques,
             @Valid @Size(max = 200) List<LoteSync> lotes,
             // Se validan uno por uno en el servicio: un evento malo no debe bloquear la cola del celular

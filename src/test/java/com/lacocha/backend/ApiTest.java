@@ -437,4 +437,11 @@ class ApiTest {
                 .content("{\"estanque_id\":\"" + estanque + "\",\"codigo\":\"LF\",\"fecha_siembra\":\"" + manana + "\"}"), 422);
         assertThat(r.get("detalle").asText()).startsWith("fecha_siembra:");
     }
+
+    @Test
+    void dispositivoConCaracteresRarosSeRechaza() throws Exception {
+        JsonNode r = llamar(post("/api/sync/push").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"dispositivo_id\":\"cel 1 <script>\",\"eventos\":[]}"), 422);
+        assertThat(r.get("detalle").asText()).startsWith("dispositivo_id:");
+    }
 }
