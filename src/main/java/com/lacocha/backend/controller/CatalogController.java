@@ -14,26 +14,27 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.lacocha.backend.dto.Catalog.PondCreate;
-import com.lacocha.backend.dto.Catalog.PondUpdate;
-import com.lacocha.backend.dto.Catalog.PondResponse;
 import com.lacocha.backend.dto.Catalog.BatchCreate;
-import com.lacocha.backend.dto.Catalog.BatchUpdate;
 import com.lacocha.backend.dto.Catalog.BatchResponse;
+import com.lacocha.backend.dto.Catalog.BatchUpdate;
+import com.lacocha.backend.dto.Catalog.PondCreate;
+import com.lacocha.backend.dto.Catalog.PondResponse;
+import com.lacocha.backend.dto.Catalog.PondUpdate;
 import com.lacocha.backend.service.CatalogService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
+// Routes, query parameters and Swagger texts stay in Spanish: they are the public API
 @RestController
 @RequestMapping("/api")
 @Tag(name = "Catálogo")
-public class CatalogoController {
+public class CatalogController {
 
     private final CatalogService service;
 
-    public CatalogoController(CatalogService service) {
+    public CatalogController(CatalogService service) {
         this.service = service;
     }
 
@@ -52,14 +53,14 @@ public class CatalogoController {
     @PostMapping("/estanques")
     @Operation(summary = "Crear un estanque desde el panel (el id es opcional)")
     @ResponseStatus(HttpStatus.CREATED)
-    public PondResponse createPond(@Valid @RequestBody PondCreate datos) {
-        return service.createPond(datos);
+    public PondResponse createPond(@Valid @RequestBody PondCreate data) {
+        return service.createPond(data);
     }
 
     @PatchMapping("/estanques/{id}")
     @Operation(summary = "Editar un estanque: solo cambian los campos enviados")
-    public PondResponse updatePond(@PathVariable UUID id, @Valid @RequestBody PondUpdate datos) {
-        return service.updatePond(id, datos);
+    public PondResponse updatePond(@PathVariable UUID id, @Valid @RequestBody PondUpdate data) {
+        return service.updatePond(id, data);
     }
 
     @GetMapping("/lotes")
@@ -79,13 +80,13 @@ public class CatalogoController {
     @PostMapping("/lotes")
     @Operation(summary = "Crear un lote en un estanque existente")
     @ResponseStatus(HttpStatus.CREATED)
-    public BatchResponse createBatch(@Valid @RequestBody BatchCreate datos) {
-        return service.createBatch(datos);
+    public BatchResponse createBatch(@Valid @RequestBody BatchCreate data) {
+        return service.createBatch(data);
     }
 
     @PatchMapping("/lotes/{id}")
     @Operation(summary = "Editar un lote (por ejemplo, cerrarlo con estado = cerrado)")
-    public BatchResponse updateBatch(@PathVariable UUID id, @Valid @RequestBody BatchUpdate datos) {
-        return service.updateBatch(id, datos);
+    public BatchResponse updateBatch(@PathVariable UUID id, @Valid @RequestBody BatchUpdate data) {
+        return service.updateBatch(id, data);
     }
 }

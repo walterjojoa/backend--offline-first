@@ -32,14 +32,14 @@ public class SyncController {
 
     @PostMapping("/push")
     @Operation(summary = "El celular sube su cola de pendientes (idempotente)")
-    public PushResponse push(@Valid @RequestBody PushRequest peticion) {
-        return service.push(peticion);
+    public PushResponse push(@Valid @RequestBody PushRequest request) {
+        return service.push(request);
     }
 
     @GetMapping("/pull")
     @Operation(summary = "El celular baja cambios del catálogo y alertas pendientes")
     public PullResponse pull(
-            @RequestParam(name = "desde", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime desde) {
-        return service.pull(desde != null ? desde.toInstant() : null);
+            @RequestParam(name = "desde", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime since) {
+        return service.pull(since != null ? since.toInstant() : null);
     }
 }
