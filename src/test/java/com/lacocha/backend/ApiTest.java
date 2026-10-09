@@ -428,4 +428,13 @@ class ApiTest {
                         + t1 + ",12.5,7.1,,sensor\n"
                         + t2 + ",13.0,,,manual\n");
     }
+
+    @Test
+    void fechaDeSiembraFuturaSeRechaza() throws Exception {
+        String estanque = crearCatalogo()[0];
+        String manana = java.time.LocalDate.now().plusDays(5).toString();
+        JsonNode r = llamar(post("/api/lotes").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"estanque_id\":\"" + estanque + "\",\"codigo\":\"LF\",\"fecha_siembra\":\"" + manana + "\"}"), 422);
+        assertThat(r.get("detalle").asText()).startsWith("fechaSiembra:");
+    }
 }

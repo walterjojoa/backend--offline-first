@@ -10,6 +10,7 @@ import com.lacocha.backend.modelo.Lote;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -60,7 +61,7 @@ public final class Catalogo {
             UUID id,
             @NotNull UUID estanqueId,
             @NotBlank @Size(max = 40) String codigo,
-            LocalDate fechaSiembra,
+            @PastOrPresent LocalDate fechaSiembra,
             @PositiveOrZero Integer cantidadInicial,
             @Positive Double pesoInicialG,
             @Pattern(regexp = ESTADOS_LOTE) String estado) {
@@ -68,7 +69,7 @@ public final class Catalogo {
 
     public record LoteEditar(
             @Size(min = 1, max = 40) String codigo,
-            LocalDate fechaSiembra,
+            @PastOrPresent LocalDate fechaSiembra,
             @PositiveOrZero Integer cantidadInicial,
             @Positive Double pesoInicialG,
             @Pattern(regexp = ESTADOS_LOTE) String estado) {
@@ -78,7 +79,7 @@ public final class Catalogo {
             @NotNull UUID id,
             @NotNull UUID estanqueId,
             @NotBlank @Size(max = 40) String codigo,
-            LocalDate fechaSiembra,
+            @PastOrPresent LocalDate fechaSiembra,
             @PositiveOrZero Integer cantidadInicial,
             @Positive Double pesoInicialG,
             @Pattern(regexp = ESTADOS_LOTE) String estado,
