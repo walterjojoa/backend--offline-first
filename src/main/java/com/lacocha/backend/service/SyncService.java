@@ -64,16 +64,19 @@ public class SyncService {
     private final BatchRepository batches;
     private final AlertRepository alerts;
     private final DeviceRepository devices;
+    private final RuleParameters rules;
     private final ObjectMapper mapper;
     private final Validator validator;
 
     public SyncService(EntityManager em, PondRepository ponds, BatchRepository batches,
-            AlertRepository alerts, DeviceRepository devices, ObjectMapper mapper, Validator validator) {
+            AlertRepository alerts, DeviceRepository devices, RuleParameters rules, ObjectMapper mapper,
+            Validator validator) {
         this.em = em;
         this.ponds = ponds;
         this.batches = batches;
         this.alerts = alerts;
         this.devices = devices;
+        this.rules = rules;
         this.mapper = mapper;
         this.validator = validator;
     }
@@ -253,7 +256,7 @@ public class SyncService {
     /** Runs the expert system on a reading and stores the alerts. Returns how many were created. */
     private int createAlerts(WaterReadingInput reading) {
         int created = 0;
-        for (Rules.Result rule : Rules.evaluateReading(reading.tempC(), reading.ph(), reading.oxygenMgL())) {
+        for (Rules.Result rule : rules.current().evaluateReading(reading.tempC(), reading.ph(), reading.oxygenMgL())) {
             // The sensor measures every few seconds: if an identical alert is already pending, do not repeat it
             if (alerts.existsByPondIdAndVariableAndLevelAndAttendedFalse(
                     reading.pondId(), rule.variable(), rule.level())) {

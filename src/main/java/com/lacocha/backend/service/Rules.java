@@ -7,40 +7,58 @@ import java.util.List;
 /**
  * Expert system (AI level 1): water quality thresholds and feed ration.
  *
- * The values are references for rainbow trout. Before the pilot they must be adjusted with the partner
- * producer and cited from technical manuals (AUNAP, FAO) and from the feed manufacturer's table.
+ * The numbers are not compiled here: they come from the parametros_rango, tasas_alimentacion and
+ * factores_temperatura tables, each with its source (see {@link RuleParameters}). Adjusting them with
+ * the producer is an UPDATE, not a redeploy. An instance is immutable, so it can be shared between threads.
  */
 public final class Rules {
-
-    private Rules() {
-    }
 
     private static final double INF = Double.POSITIVE_INFINITY;
 
     /**
      * Acceptable range of one variable. label, feminine and unit are used to build the alert message
-     * in Spanish ("Temperatura alta", "pH bajo").
+     * in Spanish ("Temperatura alta", "pH bajo"). A missing maximum is stored as infinity.
      */
-    record Range(String variable, String label, boolean feminine, String unit,
+    public record Range(String variable, String label, boolean feminine, String unit,
             double optimalMin, double optimalMax, double criticalMin, double criticalMax) {
     }
 
-    static final List<Range> RANGES = List.of(
-            new Range("temp_c", "Temperatura", true, " °C", 10.0, 16.0, 6.0, 18.0),
-            new Range("ph", "pH", false, "", 6.5, 8.5, 6.0, 9.0),
-            new Range("oxigeno_mg_l", "Oxígeno disuelto", false, " mg/L", 6.0, INF, 5.0, INF));
+    /** One row of a curve: applies up to "upTo" (inclusive) and is worth "value". */
+    public record Step(double upTo, double value) {
+    }
 
     /** level is "advertencia" or "critica"; message is shown to the caretaker. */
     public record Result(String variable, double value, String level, String message) {
     }
 
-    public static List<Result> evaluateReading(Double tempC, Double ph, Double oxygenMgL) {
+    /** Order in which the variables are evaluated, which is the order of the alerts. */
+    private static final List<String> VARIABLES = List.of("temp_c", "ph", "oxigeno_mg_l");
+
+    private final List<Range> ranges;
+    /** % of biomass per day by fish weight (g), at optimal temperature. */
+    private final List<Step> rateByWeight;
+    /** Factor by water temperature (°C). 0 suspends feeding. */
+    private final List<Step> factorByTemperature;
+
+    public Rules(List<Range> ranges, List<Step> rateByWeight, List<Step> factorByTemperature) {
+        this.ranges = List.copyOf(ranges);
+        this.rateByWeight = List.copyOf(rateByWeight);
+        this.factorByTemperature = List.copyOf(factorByTemperature);
+    }
+
+    /** A missing maximum (NULL in the database) means "no upper limit". */
+    static double orInfinity(Double value) {
+        return value != null ? value : INF;
+    }
+
+    public List<Result> evaluateReading(Double tempC, Double ph, Double oxygenMgL) {
         Double[] values = {tempC, ph, oxygenMgL};
         List<Result> results = new ArrayList<>();
-        for (int i = 0; i < RANGES.size(); i++) {
-            Range r = RANGES.get(i);
+        for (int i = 0; i < VARIABLES.size(); i++) {
+            // A variable without a row is not evaluated: deleting the row switches its alerts off
+            Range r = range(VARIABLES.get(i));
             Double value = values[i];
-            if (value == null || (value >= r.optimalMin() && value <= r.optimalMax())) {
+            if (r == null || value == null || (value >= r.optimalMin() && value <= r.optimalMax())) {
                 continue;
             }
             boolean critical = value < r.criticalMin() || value > r.criticalMax();
@@ -54,26 +72,26 @@ public final class Rules {
         return results;
     }
 
-    /** % of biomass per day by fish weight (g), at optimal temperature. {max weight, rate} */
-    private static final double[][] RATE_BY_WEIGHT = {{1.0, 6.0}, {5.0, 4.5}, {20.0, 3.0}, {50.0, 2.2}, {INF, 1.5}};
-    /** Factor by water temperature (°C). Above 18 °C feeding is suspended. */
-    private static final double[][] FACTOR_BY_TEMPERATURE = {{8.0, 0.5}, {10.0, 0.75}, {16.0, 1.0}, {18.0, 0.7}, {INF, 0.0}};
-
-    public static double feedingRatePct(double weightG, double tempC) {
-        return round(lookup(RATE_BY_WEIGHT, weightG) * lookup(FACTOR_BY_TEMPERATURE, tempC), 2);
+    private Range range(String variable) {
+        return ranges.stream().filter(r -> r.variable().equals(variable)).findFirst().orElse(null);
     }
 
-    public static double dailyRationKg(double biomassKg, double weightG, double tempC) {
+    public double feedingRatePct(double weightG, double tempC) {
+        return round(lookup(rateByWeight, weightG) * lookup(factorByTemperature, tempC), 2);
+    }
+
+    public double dailyRationKg(double biomassKg, double weightG, double tempC) {
         return round(biomassKg * feedingRatePct(weightG, tempC) / 100, 3);
     }
 
-    private static double lookup(double[][] table, double x) {
-        for (double[] row : table) {
-            if (x <= row[0]) {
-                return row[1];
+    private static double lookup(List<Step> curve, double x) {
+        for (Step step : curve) {
+            if (x <= step.upTo()) {
+                return step.value();
             }
         }
-        throw new IllegalStateException("table without a final row");
+        // Empty curve, or someone gave the last row a limit: better no ration than an invented one
+        return 0;
     }
 
     static double round(double x, int decimals) {

@@ -222,6 +222,20 @@ class ApiTest {
     }
 
     @Test
+    void parametersComeFromTheDatabaseWithTheirSource() throws Exception {
+        JsonNode p = call(get("/api/parametros"), 200);
+        assertThat(p.get("rangos")).extracting(r -> r.get("variable").asText()).containsExactly("oxigeno_mg_l", "ph", "temp_c");
+        JsonNode temp = p.get("rangos").get(2);
+        assertThat(temp.get("optimo_max").asDouble()).isEqualTo(16.0);
+        assertThat(temp.get("unidad").asText()).isEqualTo("°C");
+        assertThat(temp.get("fuente").asText()).contains("sin citar");
+        // Oxygen has no upper limit
+        assertThat(p.get("rangos").get(0).get("optimo_max").isNull()).isTrue();
+        assertThat(p.get("tasas_alimentacion")).hasSize(5);
+        assertThat(p.get("factores_temperatura").get(4).get("factor").asDouble()).isZero();
+    }
+
+    @Test
     void futureDateIsRejected() throws Exception {
         String batch = createCatalog()[1];
         String future = Instant.now().plus(Duration.ofDays(3)).toString();

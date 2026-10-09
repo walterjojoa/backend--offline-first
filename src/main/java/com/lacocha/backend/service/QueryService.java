@@ -61,10 +61,12 @@ public class QueryService {
     private final WaterReadingRepository readings;
     private final FeedingRepository feedings;
     private final AlertRepository alerts;
+    private final RuleParameters rules;
 
     public QueryService(EntityManager em, PondRepository ponds, BatchRepository batches,
             FryCountRepository counts, MortalityRepository mortalities, BiometryRepository biometries,
-            WaterReadingRepository readings, FeedingRepository feedings, AlertRepository alerts) {
+            WaterReadingRepository readings, FeedingRepository feedings, AlertRepository alerts,
+            RuleParameters rules) {
         this.em = em;
         this.ponds = ponds;
         this.batches = batches;
@@ -74,6 +76,7 @@ public class QueryService {
         this.readings = readings;
         this.feedings = feedings;
         this.alerts = alerts;
+        this.rules = rules;
     }
 
     public List<WaterReadingResponse> pondReadings(UUID pondId, Instant since, Instant until, int limit) {
@@ -210,9 +213,9 @@ public class QueryService {
         Double rate = null;
         Double ration = null;
         if (weight != null && temp != null) {
-            rate = Rules.feedingRatePct(weight, temp);
+            rate = rules.current().feedingRatePct(weight, temp);
             if (biomass != null) {
-                ration = Rules.dailyRationKg(biomass, weight, temp);
+                ration = rules.current().dailyRationKg(biomass, weight, temp);
             }
             if (rate == 0) {
                 notes.add("Agua sobre 18 °C: se recomienda suspender la alimentación.");
