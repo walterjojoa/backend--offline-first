@@ -17,6 +17,7 @@ import com.lacocha.backend.dto.Consultas.BiometriaSalida;
 import com.lacocha.backend.dto.Consultas.AlimentacionSalida;
 import com.lacocha.backend.dto.Consultas.MortalidadSalida;
 import com.lacocha.backend.dto.Consultas.LecturaAguaSalida;
+import com.lacocha.backend.dto.Consultas.LecturasDia;
 import com.lacocha.backend.dto.Consultas.ResumenLote;
 import com.lacocha.backend.dto.Sync.AlertaSalida;
 import com.lacocha.backend.servicio.ConsultaService;
@@ -46,6 +47,12 @@ public class ConsultaController {
                 desde != null ? desde.toInstant() : null,
                 hasta != null ? hasta.toInstant() : null,
                 limite);
+    }
+
+    @GetMapping("/estanques/{id}/lecturas/diario")
+    @Operation(summary = "Mínimo, máximo y promedio diario de temperatura y pH (para gráficas)")
+    public List<LecturasDia> lecturasDiarias(@PathVariable UUID id, @RequestParam(defaultValue = "7") int dias) {
+        return servicio.lecturasPorDia(id, dias);
     }
 
     @GetMapping("/lotes/{id}/conteos")

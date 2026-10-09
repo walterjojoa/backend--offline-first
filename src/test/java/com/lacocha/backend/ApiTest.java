@@ -386,4 +386,28 @@ class ApiTest {
                 "registrado_en", hace(0)));
         assertThat(otra.get("alertas_generadas").asInt()).isEqualTo(1);
     }
+
+    @Test
+    void lecturasResumidasPorDia() throws Exception {
+        String estanque = crearCatalogo()[0];
+        java.time.ZoneId bogota = java.time.ZoneId.of("America/Bogota");
+        java.time.LocalDate hoy = java.time.LocalDate.now(bogota);
+        String ayerMediodia = hoy.minusDays(1).atTime(12, 0).atZone(bogota).toOffsetDateTime().toString();
+        String ayerTarde = hoy.minusDays(1).atTime(15, 0).atZone(bogota).toOffsetDateTime().toString();
+        pushEventos(
+                mapa("tipo", "lectura_agua", "id", nuevoId(), "estanque_id", estanque, "temp_c", 12.0, "ph", 7.0, "registrado_en", ayerMediodia),
+                mapa("tipo", "lectura_agua", "id", nuevoId(), "estanque_id", estanque, "temp_c", 14.0, "registrado_en", ayerTarde),
+                mapa("tipo", "lectura_agua", "id", nuevoId(), "estanque_id", estanque, "temp_c", 13.0, "ph", 7.4, "registrado_en", hace(0)));
+
+        JsonNode r = llamar(get("/api/estanques/" + estanque + "/lecturas/diario").param("dias", "2"), 200);
+        assertThat(r).hasSize(2);
+        JsonNode ayer = r.get(0);
+        assertThat(ayer.get("fecha").asText()).isEqualTo(hoy.minusDays(1).toString());
+        assertThat(ayer.get("lecturas").asInt()).isEqualTo(2);
+        assertThat(ayer.get("temp_min").asDouble()).isEqualTo(12.0);
+        assertThat(ayer.get("temp_max").asDouble()).isEqualTo(14.0);
+        assertThat(ayer.get("temp_promedio").asDouble()).isEqualTo(13.0);
+        assertThat(ayer.get("ph_promedio").asDouble()).isEqualTo(7.0); // la lectura sin pH no cuenta
+        assertThat(r.get(1).get("fecha").asText()).isEqualTo(hoy.toString());
+    }
 }

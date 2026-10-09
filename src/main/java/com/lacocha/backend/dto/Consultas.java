@@ -1,6 +1,7 @@
 package com.lacocha.backend.dto;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -22,6 +23,12 @@ public final class Consultas {
             return new LecturaAguaSalida(l.getId(), l.getEstanqueId(), l.getTempC(), l.getPh(), l.getOxigenoMgL(),
                     l.getOrigen(), l.getRegistradoEn());
         }
+    }
+
+    /** Resumen de un día de lecturas de agua, para las gráficas del panel. */
+    public record LecturasDia(LocalDate fecha, int lecturas,
+            Double tempMin, Double tempMax, Double tempPromedio,
+            Double phMin, Double phMax, Double phPromedio) {
     }
 
     public record ConteoSalida(UUID id, UUID loteId, Integer total, Integer cortesMultiples, String origen,

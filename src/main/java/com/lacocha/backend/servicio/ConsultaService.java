@@ -5,6 +5,12 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.DoubleSummaryStatistics;
+import java.util.Map;
+import java.util.Objects;
+import java.util.TreeMap;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.List;
 import java.util.UUID;
 
@@ -16,6 +22,7 @@ import com.lacocha.backend.dto.Consultas.BiometriaSalida;
 import com.lacocha.backend.dto.Consultas.AlimentacionSalida;
 import com.lacocha.backend.dto.Consultas.MortalidadSalida;
 import com.lacocha.backend.dto.Consultas.LecturaAguaSalida;
+import com.lacocha.backend.dto.Consultas.LecturasDia;
 import com.lacocha.backend.dto.Consultas.ResumenLote;
 import com.lacocha.backend.dto.Sync.AlertaSalida;
 import com.lacocha.backend.modelo.Alerta;
@@ -82,6 +89,49 @@ public class ConsultaService {
         if (desde != null) consulta.setParameter("desde", desde);
         if (hasta != null) consulta.setParameter("hasta", hasta);
         return consulta.getResultList().stream().map(LecturaAguaSalida::de).toList();
+    }
+
+    /** Mínimo, máximo y promedio de temperatura y pH por día (hora de Colombia) de los últimos días. */
+    public List<LecturasDia> lecturasPorDia(UUID estanqueId, int dias) {
+        if (!estanques.existsById(estanqueId)) {
+            throw CatalogoService.noExiste("El estanque");
+        }
+        dias = Math.max(1, Math.min(dias, 90));
+        Instant desde = LocalDate.now(Fechas.ZONA_GRANJA).minusDays(dias - 1L)
+                .atStartOfDay(Fechas.ZONA_GRANJA).toInstant();
+        List<LecturaAgua> lista = em.createQuery(
+                        "select l from LecturaAgua l where l.estanqueId = :estanque and l.registradoEn >= :desde",
+                        LecturaAgua.class)
+                .setParameter("estanque", estanqueId)
+                .setParameter("desde", desde)
+                .getResultList();
+
+        Map<LocalDate, List<LecturaAgua>> porDia = lista.stream().collect(Collectors.groupingBy(
+                l -> LocalDate.ofInstant(l.getRegistradoEn(), Fechas.ZONA_GRANJA), TreeMap::new, Collectors.toList()));
+
+        return porDia.entrySet().stream().map(dia -> {
+            DoubleSummaryStatistics temp = estadisticas(dia.getValue(), LecturaAgua::getTempC);
+            DoubleSummaryStatistics ph = estadisticas(dia.getValue(), LecturaAgua::getPh);
+            return new LecturasDia(dia.getKey(), dia.getValue().size(),
+                    minimo(temp), maximo(temp), promedio(temp, 2),
+                    minimo(ph), maximo(ph), promedio(ph, 2));
+        }).toList();
+    }
+
+    private static DoubleSummaryStatistics estadisticas(List<LecturaAgua> lista, Function<LecturaAgua, Double> campo) {
+        return lista.stream().map(campo).filter(Objects::nonNull).mapToDouble(Double::doubleValue).summaryStatistics();
+    }
+
+    private static Double minimo(DoubleSummaryStatistics e) {
+        return e.getCount() > 0 ? e.getMin() : null;
+    }
+
+    private static Double maximo(DoubleSummaryStatistics e) {
+        return e.getCount() > 0 ? e.getMax() : null;
+    }
+
+    private static Double promedio(DoubleSummaryStatistics e, int decimales) {
+        return e.getCount() > 0 ? Reglas.redondear(e.getAverage(), decimales) : null;
     }
 
     public List<ConteoSalida> conteosLote(UUID loteId, int limite) {
