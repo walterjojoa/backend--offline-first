@@ -98,6 +98,7 @@ class ApiTest {
         MvcResult res = mvc.perform(get("/salud")).andReturn();
         assertThat(res.getResponse().getStatus()).isEqualTo(200);
         assertThat(res.getResponse().getContentAsString()).contains("\"estado\":\"ok\"");
+        assertThat(mapper.readTree(res.getResponse().getContentAsString()).get("version").asText()).isNotBlank();
     }
 
     @Test

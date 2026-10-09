@@ -2,6 +2,8 @@ package com.lacocha.backend.config;
 
 import java.util.List;
 
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.info.BuildProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -38,11 +40,12 @@ public class WebConfig {
 
     /** Agrega el botón "Authorize" con X-API-Key en /docs. */
     @Bean
-    public OpenAPI openApi() {
+    public OpenAPI openApi(ObjectProvider<BuildProperties> build) {
+        BuildProperties info = build.getIfAvailable();
         return new OpenAPI()
                 .info(new Info()
                         .title("La Cocha API")
-                        .version("0.1.0")
+                        .version(info != null ? info.getVersion() : "dev")
                         .description("Backend offline-first para el conteo de alevinos y el monitoreo de agua."))
                 .components(new Components().addSecuritySchemes("apiKey", new SecurityScheme()
                         .type(SecurityScheme.Type.APIKEY)
