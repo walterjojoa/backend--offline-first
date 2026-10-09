@@ -5,8 +5,8 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-import com.lacocha.backend.model.Estanque;
-import com.lacocha.backend.model.Lote;
+import com.lacocha.backend.model.Pond;
+import com.lacocha.backend.model.Batch;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -51,9 +51,9 @@ public final class Catalogo {
     public record EstanqueSalida(UUID id, String nombre, String tipo, Double volumenM3, boolean activo,
             Instant actualizadoEn) {
 
-        public static EstanqueSalida de(Estanque e) {
-            return new EstanqueSalida(e.getId(), e.getNombre(), e.getTipo(), e.getVolumenM3(), e.isActivo(),
-                    e.getActualizadoEn());
+        public static EstanqueSalida de(Pond e) {
+            return new EstanqueSalida(e.getId(), e.getName(), e.getType(), e.getVolumeM3(), e.isActive(),
+                    e.getUpdatedAt());
         }
     }
 
@@ -89,9 +89,9 @@ public final class Catalogo {
     public record LoteSalida(UUID id, UUID estanqueId, String codigo, LocalDate fechaSiembra,
             Integer cantidadInicial, Double pesoInicialG, String estado, Instant actualizadoEn) {
 
-        public static LoteSalida de(Lote l) {
-            return new LoteSalida(l.getId(), l.getEstanqueId(), l.getCodigo(), l.getFechaSiembra(),
-                    l.getCantidadInicial(), l.getPesoInicialG(), l.getEstado(), l.getActualizadoEn());
+        public static LoteSalida de(Batch l) {
+            return new LoteSalida(l.getId(), l.getPondId(), l.getCode(), l.getStockingDate(),
+                    l.getInitialQuantity(), l.getInitialWeightG(), l.getStatus(), l.getUpdatedAt());
         }
     }
 }

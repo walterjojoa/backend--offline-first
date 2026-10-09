@@ -5,9 +5,9 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import com.lacocha.backend.model.Lote;
+import com.lacocha.backend.model.Batch;
 
-public interface LoteRepository extends JpaRepository<Lote, UUID> {
+public interface BatchRepository extends JpaRepository<Batch, UUID> {
 
-    List<Lote> findByServidorEnAfter(Instant desde);
+    List<Batch> findByServerTimeAfter(Instant since);
 }

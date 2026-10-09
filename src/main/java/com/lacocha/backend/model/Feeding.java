@@ -2,18 +2,20 @@ package com.lacocha.backend.model;
 
 import java.util.UUID;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "alimentaciones")
-public class Alimentacion extends Evento {
+public class Feeding extends Event {
 
-    private UUID loteId;
+    @Column(name = "lote_id")
+    private UUID batchId;
     private Double kg;
 
-    public UUID getLoteId() { return loteId; }
-    public void setLoteId(UUID loteId) { this.loteId = loteId; }
+    public UUID getBatchId() { return batchId; }
+    public void setBatchId(UUID batchId) { this.batchId = batchId; }
     public Double getKg() { return kg; }
     public void setKg(Double kg) { this.kg = kg; }
 }

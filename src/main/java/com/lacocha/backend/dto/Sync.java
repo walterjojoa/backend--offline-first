@@ -9,7 +9,7 @@ import com.lacocha.backend.dto.Catalogo.EstanqueSalida;
 import com.lacocha.backend.dto.Catalogo.EstanqueSync;
 import com.lacocha.backend.dto.Catalogo.LoteSalida;
 import com.lacocha.backend.dto.Catalogo.LoteSync;
-import com.lacocha.backend.model.Alerta;
+import com.lacocha.backend.model.Alert;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -46,9 +46,9 @@ public final class Sync {
     public record AlertaSalida(UUID id, UUID estanqueId, UUID lecturaId, String variable, Double valor,
             String nivel, String mensaje, Instant medidoEn, boolean atendida, Instant atendidaEn) {
 
-        public static AlertaSalida de(Alerta a) {
-            return new AlertaSalida(a.getId(), a.getEstanqueId(), a.getLecturaId(), a.getVariable(), a.getValor(),
-                    a.getNivel(), a.getMensaje(), a.getMedidoEn(), a.isAtendida(), a.getAtendidaEn());
+        public static AlertaSalida de(Alert a) {
+            return new AlertaSalida(a.getId(), a.getPondId(), a.getReadingId(), a.getVariable(), a.getValue(),
+                    a.getLevel(), a.getMessage(), a.getMeasuredAt(), a.isAttended(), a.getAttendedAt());
         }
     }
 

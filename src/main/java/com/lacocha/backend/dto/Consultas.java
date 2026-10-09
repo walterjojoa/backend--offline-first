@@ -5,11 +5,11 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
-import com.lacocha.backend.model.Mortalidad;
-import com.lacocha.backend.model.Alimentacion;
-import com.lacocha.backend.model.Biometria;
-import com.lacocha.backend.model.Conteo;
-import com.lacocha.backend.model.LecturaAgua;
+import com.lacocha.backend.model.Mortality;
+import com.lacocha.backend.model.Feeding;
+import com.lacocha.backend.model.Biometry;
+import com.lacocha.backend.model.FryCount;
+import com.lacocha.backend.model.WaterReading;
 
 public final class Consultas {
 
@@ -19,9 +19,9 @@ public final class Consultas {
     public record LecturaAguaSalida(UUID id, UUID estanqueId, Double tempC, Double ph, Double oxigenoMgL,
             String origen, Instant registradoEn) {
 
-        public static LecturaAguaSalida de(LecturaAgua l) {
-            return new LecturaAguaSalida(l.getId(), l.getEstanqueId(), l.getTempC(), l.getPh(), l.getOxigenoMgL(),
-                    l.getOrigen(), l.getRegistradoEn());
+        public static LecturaAguaSalida de(WaterReading l) {
+            return new LecturaAguaSalida(l.getId(), l.getPondId(), l.getTempC(), l.getPh(), l.getOxygenMgL(),
+                    l.getSource(), l.getRecordedAt());
         }
     }
 
@@ -34,36 +34,36 @@ public final class Consultas {
     public record ConteoSalida(UUID id, UUID loteId, Integer total, Integer cortesMultiples, String origen,
             String dispositivoId, Instant registradoEn) {
 
-        public static ConteoSalida de(Conteo c) {
-            return new ConteoSalida(c.getId(), c.getLoteId(), c.getTotal(), c.getCortesMultiples(), c.getOrigen(),
-                    c.getDispositivoId(), c.getRegistradoEn());
+        public static ConteoSalida de(FryCount c) {
+            return new ConteoSalida(c.getId(), c.getBatchId(), c.getTotal(), c.getMultipleCuts(), c.getSource(),
+                    c.getDeviceId(), c.getRecordedAt());
         }
     }
 
     public record MortalidadSalida(UUID id, UUID loteId, Integer cantidad, String causa, String origen,
             String dispositivoId, Instant registradoEn) {
 
-        public static MortalidadSalida de(Mortalidad m) {
-            return new MortalidadSalida(m.getId(), m.getLoteId(), m.getCantidad(), m.getCausa(), m.getOrigen(),
-                    m.getDispositivoId(), m.getRegistradoEn());
+        public static MortalidadSalida de(Mortality m) {
+            return new MortalidadSalida(m.getId(), m.getBatchId(), m.getQuantity(), m.getCause(), m.getSource(),
+                    m.getDeviceId(), m.getRecordedAt());
         }
     }
 
     public record AlimentacionSalida(UUID id, UUID loteId, Double kg, String origen,
             String dispositivoId, Instant registradoEn) {
 
-        public static AlimentacionSalida de(Alimentacion a) {
-            return new AlimentacionSalida(a.getId(), a.getLoteId(), a.getKg(), a.getOrigen(),
-                    a.getDispositivoId(), a.getRegistradoEn());
+        public static AlimentacionSalida de(Feeding a) {
+            return new AlimentacionSalida(a.getId(), a.getBatchId(), a.getKg(), a.getSource(),
+                    a.getDeviceId(), a.getRecordedAt());
         }
     }
 
     public record BiometriaSalida(UUID id, UUID loteId, Double pesoPromedioG, Integer muestra, String origen,
             String dispositivoId, Instant registradoEn) {
 
-        public static BiometriaSalida de(Biometria b) {
-            return new BiometriaSalida(b.getId(), b.getLoteId(), b.getPesoPromedioG(), b.getMuestra(), b.getOrigen(),
-                    b.getDispositivoId(), b.getRegistradoEn());
+        public static BiometriaSalida de(Biometry b) {
+            return new BiometriaSalida(b.getId(), b.getBatchId(), b.getAvgWeightG(), b.getSampleSize(), b.getSource(),
+                    b.getDeviceId(), b.getRecordedAt());
         }
     }
 

@@ -8,25 +8,26 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "lecturas_agua")
-public class LecturaAgua extends Evento {
+public class WaterReading extends Event {
 
-    private UUID estanqueId;
+    @Column(name = "estanque_id")
+    private UUID pondId;
     @Column(name = "temp_c")
     private Double tempC;
     private Double ph;
     @Column(name = "oxigeno_mg_l")
-    private Double oxigenoMgL;
-    /** Voltaje crudo de la sonda de pH, útil para recalibrar. */
+    private Double oxygenMgL;
+    /** Raw voltage of the pH probe, useful for recalibration. */
     private Double mv;
 
-    public UUID getEstanqueId() { return estanqueId; }
-    public void setEstanqueId(UUID estanqueId) { this.estanqueId = estanqueId; }
+    public UUID getPondId() { return pondId; }
+    public void setPondId(UUID pondId) { this.pondId = pondId; }
     public Double getTempC() { return tempC; }
     public void setTempC(Double tempC) { this.tempC = tempC; }
     public Double getPh() { return ph; }
     public void setPh(Double ph) { this.ph = ph; }
-    public Double getOxigenoMgL() { return oxigenoMgL; }
-    public void setOxigenoMgL(Double oxigenoMgL) { this.oxigenoMgL = oxigenoMgL; }
+    public Double getOxygenMgL() { return oxygenMgL; }
+    public void setOxygenMgL(Double oxygenMgL) { this.oxygenMgL = oxygenMgL; }
     public Double getMv() { return mv; }
     public void setMv(Double mv) { this.mv = mv; }
 }

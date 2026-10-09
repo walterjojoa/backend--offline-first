@@ -14,11 +14,11 @@ import com.lacocha.backend.dto.Catalogo.EstanqueSalida;
 import com.lacocha.backend.dto.Catalogo.LoteCrear;
 import com.lacocha.backend.dto.Catalogo.LoteEditar;
 import com.lacocha.backend.dto.Catalogo.LoteSalida;
-import com.lacocha.backend.model.Estanque;
-import com.lacocha.backend.model.Lote;
-import com.lacocha.backend.model.Reloj;
-import com.lacocha.backend.repository.EstanqueRepository;
-import com.lacocha.backend.repository.LoteRepository;
+import com.lacocha.backend.model.Pond;
+import com.lacocha.backend.model.Batch;
+import com.lacocha.backend.model.ServerClock;
+import com.lacocha.backend.repository.PondRepository;
+import com.lacocha.backend.repository.BatchRepository;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
@@ -27,10 +27,10 @@ import jakarta.persistence.TypedQuery;
 public class CatalogoService {
 
     private final EntityManager em;
-    private final EstanqueRepository estanques;
-    private final LoteRepository lotes;
+    private final PondRepository estanques;
+    private final BatchRepository lotes;
 
-    public CatalogoService(EntityManager em, EstanqueRepository estanques, LoteRepository lotes) {
+    public CatalogoService(EntityManager em, PondRepository estanques, BatchRepository lotes) {
         this.em = em;
         this.estanques = estanques;
         this.lotes = lotes;
@@ -38,7 +38,7 @@ public class CatalogoService {
 
     @Transactional(readOnly = true)
     public List<EstanqueSalida> listarEstanques() {
-        return estanques.findAllByOrderByNombreAsc().stream().map(EstanqueSalida::de).toList();
+        return estanques.findAllByOrderByNameAsc().stream().map(EstanqueSalida::de).toList();
     }
 
     @Transactional(readOnly = true)
@@ -51,26 +51,26 @@ public class CatalogoService {
         if (datos.id() != null && estanques.existsById(datos.id())) {
             throw yaExiste("El estanque");
         }
-        Estanque e = new Estanque();
+        Pond e = new Pond();
         e.setId(datos.id() != null ? datos.id() : UUID.randomUUID());
-        e.setNombre(datos.nombre());
+        e.setName(datos.nombre());
         if (datos.tipo() != null) {
-            e.setTipo(datos.tipo());
+            e.setType(datos.tipo());
         }
-        e.setVolumenM3(datos.volumenM3());
-        e.setActualizadoEn(Reloj.ahora());
+        e.setVolumeM3(datos.volumenM3());
+        e.setUpdatedAt(ServerClock.now());
         em.persist(e);
         return EstanqueSalida.de(e);
     }
 
     @Transactional
     public EstanqueSalida editarEstanque(UUID id, EstanqueEditar datos) {
-        Estanque e = estanques.findById(id).orElseThrow(() -> noExiste("El estanque"));
-        if (datos.nombre() != null) e.setNombre(datos.nombre());
-        if (datos.tipo() != null) e.setTipo(datos.tipo());
-        if (datos.volumenM3() != null) e.setVolumenM3(datos.volumenM3());
-        if (datos.activo() != null) e.setActivo(datos.activo());
-        e.setActualizadoEn(Reloj.ahora());
+        Pond e = estanques.findById(id).orElseThrow(() -> noExiste("El estanque"));
+        if (datos.nombre() != null) e.setName(datos.nombre());
+        if (datos.tipo() != null) e.setType(datos.tipo());
+        if (datos.volumenM3() != null) e.setVolumeM3(datos.volumenM3());
+        if (datos.activo() != null) e.setActive(datos.activo());
+        e.setUpdatedAt(ServerClock.now());
         estanques.flush();
         return EstanqueSalida.de(e);
     }
@@ -81,12 +81,12 @@ public class CatalogoService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "estado: debe ser activo o cerrado");
         }
         // Filtra en la base de datos en vez de traer todos los lotes a memoria
-        StringBuilder jpql = new StringBuilder("select l from Lote l where 1 = 1");
-        if (estanqueId != null) jpql.append(" and l.estanqueId = :estanque");
-        if (estado != null) jpql.append(" and l.estado = :estado");
-        jpql.append(" order by l.codigo");
+        StringBuilder jpql = new StringBuilder("select l from Batch l where 1 = 1");
+        if (estanqueId != null) jpql.append(" and l.pondId = :estanque");
+        if (estado != null) jpql.append(" and l.status = :estado");
+        jpql.append(" order by l.code");
 
-        TypedQuery<Lote> consulta = em.createQuery(jpql.toString(), Lote.class);
+        TypedQuery<Batch> consulta = em.createQuery(jpql.toString(), Batch.class);
         if (estanqueId != null) consulta.setParameter("estanque", estanqueId);
         if (estado != null) consulta.setParameter("estado", estado);
         return consulta.getResultList().stream().map(LoteSalida::de).toList();
@@ -105,30 +105,30 @@ public class CatalogoService {
         if (datos.id() != null && lotes.existsById(datos.id())) {
             throw yaExiste("El lote");
         }
-        Lote l = new Lote();
+        Batch l = new Batch();
         l.setId(datos.id() != null ? datos.id() : UUID.randomUUID());
-        l.setEstanqueId(datos.estanqueId());
-        l.setCodigo(datos.codigo());
-        l.setFechaSiembra(datos.fechaSiembra());
-        l.setCantidadInicial(datos.cantidadInicial());
-        l.setPesoInicialG(datos.pesoInicialG());
+        l.setPondId(datos.estanqueId());
+        l.setCode(datos.codigo());
+        l.setStockingDate(datos.fechaSiembra());
+        l.setInitialQuantity(datos.cantidadInicial());
+        l.setInitialWeightG(datos.pesoInicialG());
         if (datos.estado() != null) {
-            l.setEstado(datos.estado());
+            l.setStatus(datos.estado());
         }
-        l.setActualizadoEn(Reloj.ahora());
+        l.setUpdatedAt(ServerClock.now());
         em.persist(l);
         return LoteSalida.de(l);
     }
 
     @Transactional
     public LoteSalida editarLote(UUID id, LoteEditar datos) {
-        Lote l = lotes.findById(id).orElseThrow(() -> noExiste("El lote"));
-        if (datos.codigo() != null) l.setCodigo(datos.codigo());
-        if (datos.fechaSiembra() != null) l.setFechaSiembra(datos.fechaSiembra());
-        if (datos.cantidadInicial() != null) l.setCantidadInicial(datos.cantidadInicial());
-        if (datos.pesoInicialG() != null) l.setPesoInicialG(datos.pesoInicialG());
-        if (datos.estado() != null) l.setEstado(datos.estado());
-        l.setActualizadoEn(Reloj.ahora());
+        Batch l = lotes.findById(id).orElseThrow(() -> noExiste("El lote"));
+        if (datos.codigo() != null) l.setCode(datos.codigo());
+        if (datos.fechaSiembra() != null) l.setStockingDate(datos.fechaSiembra());
+        if (datos.cantidadInicial() != null) l.setInitialQuantity(datos.cantidadInicial());
+        if (datos.pesoInicialG() != null) l.setInitialWeightG(datos.pesoInicialG());
+        if (datos.estado() != null) l.setStatus(datos.estado());
+        l.setUpdatedAt(ServerClock.now());
         lotes.flush();
         return LoteSalida.de(l);
     }

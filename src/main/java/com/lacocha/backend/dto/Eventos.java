@@ -5,12 +5,12 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import com.lacocha.backend.model.Alimentacion;
-import com.lacocha.backend.model.Biometria;
-import com.lacocha.backend.model.Conteo;
-import com.lacocha.backend.model.Evento;
-import com.lacocha.backend.model.LecturaAgua;
-import com.lacocha.backend.model.Mortalidad;
+import com.lacocha.backend.model.Feeding;
+import com.lacocha.backend.model.Biometry;
+import com.lacocha.backend.model.FryCount;
+import com.lacocha.backend.model.Event;
+import com.lacocha.backend.model.WaterReading;
+import com.lacocha.backend.model.Mortality;
 
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
@@ -41,7 +41,7 @@ public final class Eventos {
 
         boolean padreEsEstanque();
 
-        Evento aEntidad();
+        Event aEntidad();
 
         /** Reglas que no caben en una anotación. Devuelve null si todo está bien. */
         default String errorExtra() {
@@ -81,12 +81,12 @@ public final class Eventos {
                     : null;
         }
 
-        public Evento aEntidad() {
-            LecturaAgua l = new LecturaAgua();
-            l.setEstanqueId(estanqueId);
+        public Event aEntidad() {
+            WaterReading l = new WaterReading();
+            l.setPondId(estanqueId);
             l.setTempC(tempC);
             l.setPh(ph);
-            l.setOxigenoMgL(oxigenoMgL);
+            l.setOxygenMgL(oxigenoMgL);
             l.setMv(mv);
             return l;
         }
@@ -104,11 +104,11 @@ public final class Eventos {
 
         public boolean padreEsEstanque() { return false; }
 
-        public Evento aEntidad() {
-            Conteo c = new Conteo();
-            c.setLoteId(loteId);
+        public Event aEntidad() {
+            FryCount c = new FryCount();
+            c.setBatchId(loteId);
             c.setTotal(total);
-            c.setCortesMultiples(cortesMultiples);
+            c.setMultipleCuts(cortesMultiples);
             return c;
         }
     }
@@ -125,11 +125,11 @@ public final class Eventos {
 
         public boolean padreEsEstanque() { return false; }
 
-        public Evento aEntidad() {
-            Mortalidad m = new Mortalidad();
-            m.setLoteId(loteId);
-            m.setCantidad(cantidad);
-            m.setCausa(causa);
+        public Event aEntidad() {
+            Mortality m = new Mortality();
+            m.setBatchId(loteId);
+            m.setQuantity(cantidad);
+            m.setCause(causa);
             return m;
         }
     }
@@ -145,9 +145,9 @@ public final class Eventos {
 
         public boolean padreEsEstanque() { return false; }
 
-        public Evento aEntidad() {
-            Alimentacion a = new Alimentacion();
-            a.setLoteId(loteId);
+        public Event aEntidad() {
+            Feeding a = new Feeding();
+            a.setBatchId(loteId);
             a.setKg(kg);
             return a;
         }
@@ -165,11 +165,11 @@ public final class Eventos {
 
         public boolean padreEsEstanque() { return false; }
 
-        public Evento aEntidad() {
-            Biometria b = new Biometria();
-            b.setLoteId(loteId);
-            b.setPesoPromedioG(pesoPromedioG);
-            b.setMuestra(muestra);
+        public Event aEntidad() {
+            Biometry b = new Biometry();
+            b.setBatchId(loteId);
+            b.setAvgWeightG(pesoPromedioG);
+            b.setSampleSize(muestra);
             return b;
         }
     }

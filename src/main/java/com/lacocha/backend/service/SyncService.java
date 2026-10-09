@@ -29,14 +29,14 @@ import com.lacocha.backend.dto.Sync.PullRespuesta;
 import com.lacocha.backend.dto.Sync.PushPeticion;
 import com.lacocha.backend.dto.Sync.PushRespuesta;
 import com.lacocha.backend.dto.Sync.Rechazo;
-import com.lacocha.backend.model.Alerta;
-import com.lacocha.backend.model.Estanque;
-import com.lacocha.backend.model.Evento;
-import com.lacocha.backend.model.Lote;
-import com.lacocha.backend.model.Reloj;
-import com.lacocha.backend.repository.AlertaRepository;
-import com.lacocha.backend.repository.EstanqueRepository;
-import com.lacocha.backend.repository.LoteRepository;
+import com.lacocha.backend.model.Alert;
+import com.lacocha.backend.model.Pond;
+import com.lacocha.backend.model.Event;
+import com.lacocha.backend.model.Batch;
+import com.lacocha.backend.model.ServerClock;
+import com.lacocha.backend.repository.AlertRepository;
+import com.lacocha.backend.repository.PondRepository;
+import com.lacocha.backend.repository.BatchRepository;
 
 import jakarta.persistence.EntityManager;
 import jakarta.validation.ConstraintViolation;
@@ -55,14 +55,14 @@ public class SyncService {
     private static final Logger log = LoggerFactory.getLogger(SyncService.class);
 
     private final EntityManager em;
-    private final EstanqueRepository estanques;
-    private final LoteRepository lotes;
-    private final AlertaRepository alertas;
+    private final PondRepository estanques;
+    private final BatchRepository lotes;
+    private final AlertRepository alertas;
     private final ObjectMapper mapper;
     private final Validator validator;
 
-    public SyncService(EntityManager em, EstanqueRepository estanques, LoteRepository lotes,
-            AlertaRepository alertas, ObjectMapper mapper, Validator validator) {
+    public SyncService(EntityManager em, PondRepository estanques, BatchRepository lotes,
+            AlertRepository alertas, ObjectMapper mapper, Validator validator) {
         this.em = em;
         this.estanques = estanques;
         this.lotes = lotes;
@@ -88,7 +88,7 @@ public class SyncService {
 
     @Transactional
     public PushRespuesta push(PushPeticion peticion) {
-        Instant servidorEn = Reloj.ahora();
+        Instant servidorEn = ServerClock.now();
         Resultado r = new Resultado();
 
         for (EstanqueSync e : lista(peticion.estanques())) {
@@ -97,20 +97,20 @@ public class SyncService {
                 r.rechazados.add(new Rechazo(e.id().toString(), "actualizado_en: " + error));
                 continue;
             }
-            Estanque actual = estanques.findById(e.id()).orElse(null);
+            Pond actual = estanques.findById(e.id()).orElse(null);
             boolean nuevo = actual == null;
             if (nuevo) {
-                actual = new Estanque();
+                actual = new Pond();
                 actual.setId(e.id());
-            } else if (!e.actualizadoEn().toInstant().isAfter(actual.getActualizadoEn())) {
+            } else if (!e.actualizadoEn().toInstant().isAfter(actual.getUpdatedAt())) {
                 r.obsoletos.add(e.id());
                 continue;
             }
-            actual.setNombre(e.nombre());
-            actual.setTipo(e.tipo() != null ? e.tipo() : "estanque");
-            actual.setVolumenM3(e.volumenM3());
-            actual.setActivo(e.activo() == null || e.activo());
-            actual.setActualizadoEn(e.actualizadoEn().toInstant());
+            actual.setName(e.nombre());
+            actual.setType(e.tipo() != null ? e.tipo() : "estanque");
+            actual.setVolumeM3(e.volumenM3());
+            actual.setActive(e.activo() == null || e.activo());
+            actual.setUpdatedAt(e.actualizadoEn().toInstant());
             if (nuevo) {
                 em.persist(actual);
             }
@@ -128,22 +128,22 @@ public class SyncService {
                 r.rechazados.add(new Rechazo(l.id().toString(), "estanque_id: el estanque no existe"));
                 continue;
             }
-            Lote actual = lotes.findById(l.id()).orElse(null);
+            Batch actual = lotes.findById(l.id()).orElse(null);
             boolean nuevo = actual == null;
             if (nuevo) {
-                actual = new Lote();
+                actual = new Batch();
                 actual.setId(l.id());
-            } else if (!l.actualizadoEn().toInstant().isAfter(actual.getActualizadoEn())) {
+            } else if (!l.actualizadoEn().toInstant().isAfter(actual.getUpdatedAt())) {
                 r.obsoletos.add(l.id());
                 continue;
             }
-            actual.setEstanqueId(l.estanqueId());
-            actual.setCodigo(l.codigo());
-            actual.setFechaSiembra(l.fechaSiembra());
-            actual.setCantidadInicial(l.cantidadInicial());
-            actual.setPesoInicialG(l.pesoInicialG());
-            actual.setEstado(l.estado() != null ? l.estado() : "activo");
-            actual.setActualizadoEn(l.actualizadoEn().toInstant());
+            actual.setPondId(l.estanqueId());
+            actual.setCode(l.codigo());
+            actual.setStockingDate(l.fechaSiembra());
+            actual.setInitialQuantity(l.cantidadInicial());
+            actual.setInitialWeightG(l.pesoInicialG());
+            actual.setStatus(l.estado() != null ? l.estado() : "activo");
+            actual.setUpdatedAt(l.actualizadoEn().toInstant());
             if (nuevo) {
                 em.persist(actual);
             }
@@ -162,7 +162,7 @@ public class SyncService {
             }
 
             if (!padresConocidos.contains(evento.padreId())) {
-                Class<?> clasePadre = evento.padreEsEstanque() ? Estanque.class : Lote.class;
+                Class<?> clasePadre = evento.padreEsEstanque() ? Pond.class : Batch.class;
                 if (em.find(clasePadre, evento.padreId()) == null) {
                     String campo = evento.padreEsEstanque() ? "estanque_id" : "lote_id";
                     r.rechazados.add(new Rechazo(evento.id().toString(), campo + ": no existe"));
@@ -171,34 +171,34 @@ public class SyncService {
                 padresConocidos.add(evento.padreId());
             }
 
-            Evento entidad = evento.aEntidad();
+            Event entidad = evento.aEntidad();
             if (em.find(entidad.getClass(), evento.id()) != null) {
                 r.duplicados.add(evento.id());
                 continue;
             }
             entidad.setId(evento.id());
-            entidad.setDispositivoId(peticion.dispositivoId());
-            entidad.setOrigen(evento.origen() != null ? evento.origen() : "manual");
-            entidad.setRegistradoEn(evento.registradoEn().toInstant());
-            entidad.setRecibidoEn(servidorEn);
+            entidad.setDeviceId(peticion.dispositivoId());
+            entidad.setSource(evento.origen() != null ? evento.origen() : "manual");
+            entidad.setRecordedAt(evento.registradoEn().toInstant());
+            entidad.setReceivedAt(servidorEn);
             em.persist(entidad);
             r.aceptados.add(evento.id());
 
             if (evento instanceof LecturaAguaEntrada lectura) {
                 for (Reglas.Resultado regla : Reglas.evaluarLectura(lectura.tempC(), lectura.ph(), lectura.oxigenoMgL())) {
                     // El sensor mide cada pocos segundos: si ya hay una alerta pendiente igual, no se repite
-                    if (alertas.existsByEstanqueIdAndVariableAndNivelAndAtendidaFalse(
+                    if (alertas.existsByPondIdAndVariableAndLevelAndAttendedFalse(
                             lectura.estanqueId(), regla.variable(), regla.nivel())) {
                         continue;
                     }
-                    Alerta alerta = new Alerta();
-                    alerta.setEstanqueId(lectura.estanqueId());
-                    alerta.setLecturaId(lectura.id());
+                    Alert alerta = new Alert();
+                    alerta.setPondId(lectura.estanqueId());
+                    alerta.setReadingId(lectura.id());
                     alerta.setVariable(regla.variable());
-                    alerta.setValor(regla.valor());
-                    alerta.setNivel(regla.nivel());
-                    alerta.setMensaje(regla.mensaje());
-                    alerta.setMedidoEn(lectura.registradoEn().toInstant());
+                    alerta.setValue(regla.valor());
+                    alerta.setLevel(regla.nivel());
+                    alerta.setMessage(regla.mensaje());
+                    alerta.setMeasuredAt(lectura.registradoEn().toInstant());
                     em.persist(alerta);
                     r.alertasGeneradas++;
                 }
@@ -214,13 +214,13 @@ public class SyncService {
     /** desde es el servidor_en que devolvió el pull anterior. Sin él, baja todo. */
     @Transactional(readOnly = true)
     public PullRespuesta pull(Instant desde) {
-        Instant servidorEn = Reloj.ahora();
-        List<Estanque> listaEstanques = desde == null ? estanques.findAll() : estanques.findByServidorEnAfter(desde);
-        List<Lote> listaLotes = desde == null ? lotes.findAll() : lotes.findByServidorEnAfter(desde);
+        Instant servidorEn = ServerClock.now();
+        List<Pond> listaEstanques = desde == null ? estanques.findAll() : estanques.findByServerTimeAfter(desde);
+        List<Batch> listaLotes = desde == null ? lotes.findAll() : lotes.findByServerTimeAfter(desde);
         return new PullRespuesta(
                 listaEstanques.stream().map(EstanqueSalida::de).toList(),
                 listaLotes.stream().map(LoteSalida::de).toList(),
-                alertas.findTop100ByAtendidaFalseOrderByMedidoEnDesc().stream().map(AlertaSalida::de).toList(),
+                alertas.findTop100ByAttendedFalseOrderByMeasuredAtDesc().stream().map(AlertaSalida::de).toList(),
                 servidorEn);
     }
 
