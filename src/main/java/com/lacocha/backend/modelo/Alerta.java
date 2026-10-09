@@ -23,6 +23,7 @@ public class Alerta {
     private Instant medidoEn;
     private Instant creadaEn = Reloj.ahora();
     private boolean atendida = false;
+    private Instant atendidaEn;
 
     public UUID getId() { return id; }
     public UUID getEstanqueId() { return estanqueId; }
@@ -42,4 +43,6 @@ public class Alerta {
     public Instant getCreadaEn() { return creadaEn; }
     public boolean isAtendida() { return atendida; }
     public void setAtendida(boolean atendida) { this.atendida = atendida; }
+    public Instant getAtendidaEn() { return atendidaEn; }
+    public void setAtendidaEn(Instant atendidaEn) { this.atendidaEn = atendidaEn; }
 }

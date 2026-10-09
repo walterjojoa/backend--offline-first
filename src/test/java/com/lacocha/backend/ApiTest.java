@@ -223,7 +223,12 @@ class ApiTest {
 
         JsonNode alertas = llamar(get("/api/alertas").param("estanque_id", estanque), 200);
         assertThat(alertas.get(0).get("nivel").asText()).isEqualTo("advertencia");
-        llamar(post("/api/alertas/" + alertas.get(0).get("id").asText() + "/atender"), 200);
+        String id = alertas.get(0).get("id").asText();
+        JsonNode atendida = llamar(post("/api/alertas/" + id + "/atender"), 200);
+        assertThat(atendida.get("atendida").asBoolean()).isTrue();
+        String hora = atendida.get("atendida_en").asText();
+        assertThat(hora).isNotEmpty();
+        assertThat(llamar(post("/api/alertas/" + id + "/atender"), 200).get("atendida_en").asText()).isEqualTo(hora);
         assertThat(llamar(get("/api/alertas").param("estanque_id", estanque), 200)).isEmpty();
     }
 

@@ -26,6 +26,7 @@ import com.lacocha.backend.modelo.Mortalidad;
 import com.lacocha.backend.modelo.Evento;
 import com.lacocha.backend.modelo.LecturaAgua;
 import com.lacocha.backend.modelo.Lote;
+import com.lacocha.backend.modelo.Reloj;
 import com.lacocha.backend.repositorio.AlertaRepository;
 import com.lacocha.backend.repositorio.AlimentacionRepository;
 import com.lacocha.backend.repositorio.BiometriaRepository;
@@ -211,7 +212,11 @@ public class ConsultaService {
     @Transactional
     public AlertaSalida atenderAlerta(UUID id) {
         Alerta alerta = alertas.findById(id).orElseThrow(() -> CatalogoService.noExiste("La alerta"));
-        alerta.setAtendida(true);
+        // Atender dos veces no cambia la hora original
+        if (!alerta.isAtendida()) {
+            alerta.setAtendida(true);
+            alerta.setAtendidaEn(Reloj.ahora());
+        }
         return AlertaSalida.de(alerta);
     }
 }
