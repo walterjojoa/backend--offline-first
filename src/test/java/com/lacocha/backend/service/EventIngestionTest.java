@@ -52,4 +52,8 @@ class EventIngestionTest {
             .propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
             .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
             .build();
+
+    private final EventIngestors ingestors = new EventIngestors(TROUT);
+
+    private static final Instant SERVER_TIME = Instant.parse("2026-10-18T21:00:00Z");
 }
