@@ -210,4 +210,17 @@ class EventIngestionTest {
                 .satisfies(r -> assertThat(r.error())
                         .isEqualTo("tipo: debe ser uno de lectura_agua, conteo, mortalidad, alimentacion, biometria"));
     }
+
+    @Test
+    void withoutOrigenTheEventIsStoredAsManual() {
+        store.parents.add(batchId);
+        JsonNode noSource = json("""
+                {"tipo":"conteo","id":"%s","registrado_en":"%s","lote_id":"%s","total":7}
+                """.formatted(UUID.randomUUID(), RECORDED_AT, batchId));
+
+        ingest(noSource);
+
+        assertThat(store.stored.values()).singleElement()
+                .satisfies(e -> assertThat(e.getSource()).isEqualTo("manual"));
+    }
 }
