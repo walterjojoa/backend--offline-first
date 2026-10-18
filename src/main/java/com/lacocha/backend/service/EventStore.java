@@ -17,4 +17,6 @@ import com.lacocha.backend.model.Event;
 public interface EventStore {
     /** true when an event with this id is already stored: the phone retried after losing signal. */
     boolean exists(Event event);
+
+    void save(Event event);
 }
