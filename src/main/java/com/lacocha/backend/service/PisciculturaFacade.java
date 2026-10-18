@@ -78,4 +78,8 @@ public class PisciculturaFacade {
     public BatchResponse createBatch(BatchCreate data) {
         return catalog.createBatch(data);
     }
+
+    public BatchResponse updateBatch(UUID id, BatchUpdate data) {
+        return catalog.updateBatch(id, data);
+    }
 }
