@@ -66,4 +66,8 @@ public class PisciculturaFacade {
     public PondResponse updatePond(UUID id, PondUpdate data) {
         return catalog.updatePond(id, data);
     }
+
+    public List<BatchResponse> listBatches(UUID pondId, String status) {
+        return catalog.listBatches(pondId, status);
+    }
 }
