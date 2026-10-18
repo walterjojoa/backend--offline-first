@@ -135,4 +135,12 @@ public class EventIngestors {
     private final Map<String, Factory> byTipo = new LinkedHashMap<>();
 
     private final Map<Class<? extends Input>, Factory> byInputType = new LinkedHashMap<>();
+
+    public EventIngestors(RuleParameters rules) {
+        register(new WaterReadings(rules));
+        register(new Plain("conteo", FryCountInput.class));
+        register(new Plain("mortalidad", MortalityInput.class));
+        register(new Plain("alimentacion", FeedingInput.class));
+        register(new Plain("biometria", BiometryInput.class));
+    }
 }
