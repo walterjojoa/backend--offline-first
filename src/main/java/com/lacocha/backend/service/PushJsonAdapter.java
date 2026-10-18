@@ -35,4 +35,8 @@ public class PushJsonAdapter {
     }
 
     private final ObjectMapper mapper;
+
+    private final Validator validator;
+
+    private final EventIngestors ingestors;
 }
