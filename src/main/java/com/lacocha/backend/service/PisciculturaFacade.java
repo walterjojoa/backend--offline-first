@@ -1,0 +1,47 @@
+package com.lacocha.backend.service;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.stereotype.Service;
+
+import com.lacocha.backend.dto.Catalog.BatchCreate;
+import com.lacocha.backend.dto.Catalog.BatchResponse;
+import com.lacocha.backend.dto.Catalog.BatchUpdate;
+import com.lacocha.backend.dto.Catalog.PondCreate;
+import com.lacocha.backend.dto.Catalog.PondResponse;
+import com.lacocha.backend.dto.Catalog.PondUpdate;
+import com.lacocha.backend.dto.Devices.DeviceResponse;
+import com.lacocha.backend.dto.Devices.DeviceUpdate;
+import com.lacocha.backend.dto.Devices.SyncLogResponse;
+import com.lacocha.backend.dto.Parameters.ParametersResponse;
+import com.lacocha.backend.dto.Queries.BatchSummary;
+import com.lacocha.backend.dto.Queries.BiometryResponse;
+import com.lacocha.backend.dto.Queries.DailyReadings;
+import com.lacocha.backend.dto.Queries.FeedingResponse;
+import com.lacocha.backend.dto.Queries.FryCountResponse;
+import com.lacocha.backend.dto.Queries.MortalityResponse;
+import com.lacocha.backend.dto.Queries.WaterReadingResponse;
+import com.lacocha.backend.dto.Sync.AlertResponse;
+import com.lacocha.backend.dto.Sync.PullResponse;
+import com.lacocha.backend.dto.Sync.PushRequest;
+import com.lacocha.backend.dto.Sync.PushResponse;
+
+/**
+ * The one door into the system for the HTTP layer.
+ *
+ * Behind it live the four subsystems the controllers used to reach into one by one: the catalog of
+ * ponds and batches, the synchronization with the phones, the reading of the events the devices
+ * uploaded, and the parameters of the expert system. A controller should only know its route, its
+ * JSON and which use case to call; which service holds that use case, and whether it stays there
+ * tomorrow, is none of its business.
+ *
+ * The rule, easy to check with a grep: a controller injects this facade and no service.
+ */
+@Service
+public class PisciculturaFacade {
+    private final CatalogService catalog;
+
+    private final QueryService queries;
+}
