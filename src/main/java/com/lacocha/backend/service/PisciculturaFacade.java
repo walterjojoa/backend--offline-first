@@ -41,13 +41,21 @@ import com.lacocha.backend.dto.Sync.PushResponse;
  */
 @Service
 public class PisciculturaFacade {
+
     private final CatalogService catalog;
-
     private final QueryService queries;
-
     private final SyncService sync;
-
     private final DeviceService devices;
+    private final RuleParameters parameters;
+
+    public PisciculturaFacade(CatalogService catalog, QueryService queries, SyncService sync,
+            DeviceService devices, RuleParameters parameters) {
+        this.catalog = catalog;
+        this.queries = queries;
+        this.sync = sync;
+        this.devices = devices;
+        this.parameters = parameters;
+    }
 
     // ---------- Catalog: ponds and batches, editable from the panel and from any phone ----------
 
@@ -144,14 +152,9 @@ public class PisciculturaFacade {
         return devices.syncLog(deviceId);
     }
 
-    private final RuleParameters parameters;
+    // ---------- Parameters of the expert system ----------
 
-    public PisciculturaFacade(CatalogService catalog, QueryService queries, SyncService sync,
-            DeviceService devices, RuleParameters parameters) {
-        this.catalog = catalog;
-        this.queries = queries;
-        this.sync = sync;
-        this.devices = devices;
-        this.parameters = parameters;
+    public ParametersResponse parameters() {
+        return parameters.response();
     }
 }
