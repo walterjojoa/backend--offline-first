@@ -19,4 +19,7 @@ public interface EventStore {
     boolean exists(Event event);
 
     void save(Event event);
+
+    /** The pond (water readings) or batch (everything else) the event points at. */
+    boolean parentExists(boolean parentIsPond, UUID parentId);
 }
