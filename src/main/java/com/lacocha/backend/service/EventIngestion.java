@@ -38,4 +38,12 @@ public class EventIngestion {
     private final PushJsonAdapter adapter;
 
     private final EventIngestors ingestors;
+
+    public EventIngestion(EventStore store, PushJsonAdapter adapter, EventIngestors ingestors) {
+        this.store = store;
+        this.adapter = adapter;
+        this.ingestors = ingestors;
+    }
+
+    private static final Logger log = LoggerFactory.getLogger(EventIngestion.class);
 }
