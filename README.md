@@ -15,6 +15,7 @@ src/main/java/com/lacocha/backend/
 ├── repository/    Consultas a la base de datos (Spring Data)
 ├── dto/           Lo que entra y sale de la API (records)
 ├── service/       Lógica: sincronización, resumen del lote y reglas (sistema experto)
+│                  PisciculturaFacade es la única puerta que usan los controladores
 └── controller/    Rutas REST y manejo de errores
 src/main/resources/db/
 ├── migration/     Tablas (Flyway), comunes a PostgreSQL y H2
@@ -178,5 +179,13 @@ Nota: en el plan gratis Render apaga el servicio tras 15 min sin uso y el primer
 ## Pruebas automáticas
 
 `.\mvnw test` corre las pruebas de la API (con H2 en memoria) y las unitarias de las reglas,
-las fechas y la configuración. GitHub Actions las corre en cada push a `main`
+las fechas, la configuración y la ingestión de eventos. GitHub Actions las corre en cada push a `main`
 (pestaña **Actions** del repositorio).
+
+`EventIngestionTest` prueba las reglas del push **sin base de datos y sin contexto de Spring**: el
+`EventStore` es un mapa. Eso es lo que compra el Bridge. Cubre que un conteo se acepta con su
+dispositivo y su hora de llegada, que el mismo evento dos veces vuelve como duplicado y se guarda una
+sola vez, que un evento huérfano se rechaza solo y el resto de la cola pasa, que el error nombra el
+campo como el JSON, que sin `origen` se guarda como `manual`, que una lectura fuera de rango levanta
+alerta y una idéntica no la repite, y que un conteo nunca levanta alertas. Tarda milisegundos; el mismo
+terreno por HTTP en `ApiTest` cuesta levantar la aplicación y el esquema H2.
