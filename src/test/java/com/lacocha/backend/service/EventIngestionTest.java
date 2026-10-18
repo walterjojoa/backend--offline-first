@@ -60,4 +60,14 @@ class EventIngestionTest {
     private static final String RECORDED_AT = "2026-10-18T15:30:00-05:00";
 
     private final UUID batchId = UUID.randomUUID();
+
+    private final UUID pondId = UUID.randomUUID();
+
+    private JsonNode json(String raw) {
+        try {
+            return mapper.readTree(raw);
+        } catch (Exception ex) {
+            throw new IllegalArgumentException(ex);
+        }
+    }
 }
