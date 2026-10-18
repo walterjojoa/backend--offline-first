@@ -88,4 +88,8 @@ public class PisciculturaFacade {
     public List<WaterReadingResponse> pondReadings(UUID pondId, Instant since, Instant until, int limit) {
         return queries.pondReadings(pondId, since, until, limit);
     }
+
+    public List<DailyReadings> dailyReadings(UUID pondId, int days) {
+        return queries.dailyReadings(pondId, days);
+    }
 }
