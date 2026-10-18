@@ -46,4 +46,15 @@ public class EventIngestion {
     }
 
     private static final Logger log = LoggerFactory.getLogger(EventIngestion.class);
+
+    /** The id comes from the phone (that is what makes the push idempotent); the rest is the server's. */
+    private static Event stamp(Input event, String deviceId, Instant serverTime) {
+        Event entity = event.toEntity();
+        entity.setId(event.id());
+        entity.setDeviceId(deviceId);
+        entity.setSource(event.source() != null ? event.source() : "manual");
+        entity.setRecordedAt(event.recordedAt().toInstant());
+        entity.setReceivedAt(serverTime);
+        return entity;
+    }
 }
