@@ -82,4 +82,52 @@ public class EventIngestors {
             return (event, store) -> 0;
         }
     }
+
+    /**
+     * A water reading also runs the expert system. The alert has to be raised in the same
+     * transaction that stored the reading: otherwise a push that rolls back would leave an alert
+     * pointing at a reading nobody has.
+     */
+    public static final class WaterReadings extends Factory {
+
+        private final RuleParameters rules;
+
+        public WaterReadings(RuleParameters rules) {
+            this.rules = rules;
+        }
+
+        @Override
+        public String tipo() {
+            return "lectura_agua";
+        }
+
+        @Override
+        public Class<? extends Input> inputType() {
+            return WaterReadingInput.class;
+        }
+
+        @Override
+        protected Ingestor createIngestor() {
+            return this::raiseAlerts;
+        }
+
+        private int raiseAlerts(Input event, EventStore store) {
+            WaterReadingInput reading = (WaterReadingInput) event;
+            List<Alert> candidates = new ArrayList<>();
+            for (Rules.Result rule : rules.current().evaluateReading(reading.tempC(), reading.ph(),
+                    reading.oxygenMgL())) {
+                Alert alert = new Alert();
+                alert.setPondId(reading.pondId());
+                alert.setReadingId(reading.id());
+                alert.setVariable(rule.variable());
+                alert.setValue(rule.value());
+                alert.setLevel(rule.level());
+                alert.setMessage(rule.message());
+                alert.setMeasuredAt(reading.recordedAt().toInstant());
+                candidates.add(alert);
+            }
+            // The store is the one that knows which of these are already pending
+            return store.saveNewAlerts(candidates);
+        }
+    }
 }
