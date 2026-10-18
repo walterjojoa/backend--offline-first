@@ -28,4 +28,31 @@ public class EventIngestors {
     public interface Ingestor {
         int afterStore(Input event, EventStore store);
     }
+
+    /**
+     * Factory Method: each subclass answers for one "tipo" of the protocol and decides which
+     * ingestor handles it. Accepting a new kind of event is adding a subclass and registering it
+     * below; the adapter, the pipeline and the controllers do not change.
+     */
+    public abstract static class Factory {
+
+        private Ingestor cached;
+
+        /** The tag the device puts in the JSON "tipo" field. */
+        public abstract String tipo();
+
+        /** The record the adapter has to parse the raw item into. */
+        public abstract Class<? extends Input> inputType();
+
+        /** The factory method. */
+        protected abstract Ingestor createIngestor();
+
+        /** Created once: an ingestor holds no state and a single push can carry 500 events. */
+        public final Ingestor ingestor() {
+            if (cached == null) {
+                cached = createIngestor();
+            }
+            return cached;
+        }
+    }
 }
