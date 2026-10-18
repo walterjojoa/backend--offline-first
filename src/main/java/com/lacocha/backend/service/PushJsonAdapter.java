@@ -45,4 +45,9 @@ public class PushJsonAdapter {
         this.validator = validator;
         this.ingestors = ingestors;
     }
+
+    /** The id of an item that could not even be parsed, so the phone can still match the rejection. */
+    public static String rawId(JsonNode raw) {
+        return raw != null && raw.hasNonNull("id") ? raw.get("id").asText() : null;
+    }
 }
