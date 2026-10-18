@@ -49,4 +49,30 @@ public final class EventStoreDecorators {
             return inner.saveNewAlerts(alerts);
         }
     }
+
+    /**
+     * One line per stored event. A push carries up to 500 of them, so it is only wrapped when its
+     * level is really on (see enabled()); it exists to answer the question that always comes up in
+     * the field: "the app says it sent it, is it there?".
+     */
+    public static final class Trace extends Decorator {
+
+        private static final Logger log = LoggerFactory.getLogger(Trace.class);
+
+        public Trace(EventStore inner) {
+            super(inner);
+        }
+
+        /** Lets the pipeline skip the wrapping altogether when nobody is reading the trace. */
+        public static boolean enabled() {
+            return log.isDebugEnabled();
+        }
+
+        @Override
+        public void save(Event event) {
+            inner.save(event);
+            log.debug("stored {} {} from {} (origen {})", event.getClass().getSimpleName(), event.getId(),
+                    event.getDeviceId(), event.getSource());
+        }
+    }
 }
