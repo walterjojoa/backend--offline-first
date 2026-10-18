@@ -39,4 +39,11 @@ public class JpaEventStore implements EventStore {
     public void save(Event event) {
         em.persist(event);
     }
+
+    @Override
+    public boolean parentExists(boolean parentIsPond, UUID parentId) {
+        // In a variable and not inline: the ternary of two entity classes defeats type inference
+        Class<?> parent = parentIsPond ? Pond.class : Batch.class;
+        return em.find(parent, parentId) != null;
+    }
 }
