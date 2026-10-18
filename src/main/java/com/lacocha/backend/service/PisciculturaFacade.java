@@ -92,4 +92,8 @@ public class PisciculturaFacade {
     public List<DailyReadings> dailyReadings(UUID pondId, int days) {
         return queries.dailyReadings(pondId, days);
     }
+
+    public List<FryCountResponse> fryCounts(UUID batchId, int limit) {
+        return queries.fryCounts(batchId, limit);
+    }
 }
