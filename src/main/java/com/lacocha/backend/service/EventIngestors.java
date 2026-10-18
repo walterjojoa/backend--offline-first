@@ -154,4 +154,8 @@ public class EventIngestors {
         Factory factory = byTipo.get(tipo);
         return factory != null ? factory.inputType() : null;
     }
+
+    public Set<String> tipos() {
+        return byTipo.keySet();
+    }
 }
