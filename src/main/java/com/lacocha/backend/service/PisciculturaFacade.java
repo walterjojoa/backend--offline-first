@@ -108,4 +108,9 @@ public class PisciculturaFacade {
     public List<BiometryResponse> biometries(UUID batchId, int limit) {
         return queries.biometries(batchId, limit);
     }
+
+    /** What the expert system works out for one batch from its events. */
+    public BatchSummary batchSummary(UUID batchId) {
+        return queries.batchSummary(batchId);
+    }
 }
