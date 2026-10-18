@@ -169,4 +169,22 @@ class EventIngestionTest {
         assertThat(retry.accepted()).isEmpty();
         assertThat(store.stored).hasSize(1);
     }
+
+    @Test
+    void aBadItemIsRejectedAloneAndTheRestOfTheQueueGoesThrough() {
+        store.parents.add(batchId);
+        UUID good = UUID.randomUUID();
+        UUID orphan = UUID.randomUUID();
+        JsonNode otherBatch = json("""
+                {"tipo":"conteo","id":"%s","registrado_en":"%s","lote_id":"%s","total":10}
+                """.formatted(orphan, RECORDED_AT, UUID.randomUUID()));
+
+        EventIngestion.Outcome outcome = ingest(otherBatch, count(good, 10));
+
+        assertThat(outcome.accepted()).containsExactly(good);
+        assertThat(outcome.rejected()).singleElement().satisfies(r -> {
+            assertThat(r.id()).isEqualTo(orphan.toString());
+            assertThat(r.error()).isEqualTo("lote_id: no existe");
+        });
+    }
 }
