@@ -27,6 +27,7 @@ import jakarta.validation.Validator;
  */
 @Component
 public class PushJsonAdapter {
+
     /** A pond, batch or event that cannot be stored. It is rejected alone; the rest of the push goes on. */
     public static class InvalidItem extends Exception {
         public InvalidItem(String message) {
@@ -35,9 +36,7 @@ public class PushJsonAdapter {
     }
 
     private final ObjectMapper mapper;
-
     private final Validator validator;
-
     private final EventIngestors ingestors;
 
     public PushJsonAdapter(ObjectMapper mapper, Validator validator, EventIngestors ingestors) {
@@ -46,20 +45,26 @@ public class PushJsonAdapter {
         this.ingestors = ingestors;
     }
 
-    /** The id of an item that could not even be parsed, so the phone can still match the rejection. */
-    public static String rawId(JsonNode raw) {
-        return raw != null && raw.hasNonNull("id") ? raw.get("id").asText() : null;
-    }
-
-    /** Jackson already reports the path with the JSON names. */
-    private static String fieldWithError(JsonProcessingException ex) {
-        if (ex instanceof MismatchedInputException m && !m.getPath().isEmpty()) {
-            String field = m.getPath().get(m.getPath().size() - 1).getFieldName();
-            if (field != null) {
-                return field;
-            }
+    /** Raw item -> typed event, including the rules that do not fit in an annotation. */
+    public Input readEvent(JsonNode raw) throws InvalidItem {
+        if (raw == null || !raw.isObject()) {
+            throw new InvalidItem("el evento debe ser un objeto JSON");
         }
-        return "dato";
+        Class<? extends Input> type = ingestors.inputType(raw.path("tipo").asText(""));
+        if (type == null) {
+            throw new InvalidItem("tipo: debe ser uno de " + String.join(", ", ingestors.tipos()));
+        }
+
+        Input event = read(raw, type);
+        String error = Dates.deviceDateError(event.recordedAt());
+        if (error != null) {
+            throw new InvalidItem("registrado_en: " + error);
+        }
+        error = event.extraError();
+        if (error != null) {
+            throw new InvalidItem(error);
+        }
+        return event;
     }
 
     /** JSON -> record, plus its annotations (@NotNull, @Size...). Ponds and batches come through here too. */
@@ -82,5 +87,21 @@ public class PushJsonAdapter {
             throw new InvalidItem(JsonNames.of(type, v.getPropertyPath().toString()) + ": " + v.getMessage());
         }
         return value;
+    }
+
+    /** The id of an item that could not even be parsed, so the phone can still match the rejection. */
+    public static String rawId(JsonNode raw) {
+        return raw != null && raw.hasNonNull("id") ? raw.get("id").asText() : null;
+    }
+
+    /** Jackson already reports the path with the JSON names. */
+    private static String fieldWithError(JsonProcessingException ex) {
+        if (ex instanceof MismatchedInputException m && !m.getPath().isEmpty()) {
+            String field = m.getPath().get(m.getPath().size() - 1).getFieldName();
+            if (field != null) {
+                return field;
+            }
+        }
+        return "dato";
     }
 }
