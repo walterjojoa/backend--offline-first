@@ -148,4 +148,10 @@ public class EventIngestors {
         byTipo.put(factory.tipo(), factory);
         byInputType.put(factory.inputType(), factory);
     }
+
+    /** null when the device sent a "tipo" this server does not know. */
+    public Class<? extends Input> inputType(String tipo) {
+        Factory factory = byTipo.get(tipo);
+        return factory != null ? factory.inputType() : null;
+    }
 }
