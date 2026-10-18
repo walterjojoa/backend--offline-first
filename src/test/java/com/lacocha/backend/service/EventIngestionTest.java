@@ -70,4 +70,18 @@ class EventIngestionTest {
             throw new IllegalArgumentException(ex);
         }
     }
+
+    private JsonNode count(UUID id, int total) {
+        return json("""
+                {"tipo":"conteo","id":"%s","registrado_en":"%s","origen":"contador",
+                 "lote_id":"%s","total":%d,"cortes_multiples":2}
+                """.formatted(id, RECORDED_AT, batchId, total));
+    }
+
+    private JsonNode reading(UUID id, double tempC) {
+        return json("""
+                {"tipo":"lectura_agua","id":"%s","registrado_en":"%s","origen":"sensor",
+                 "estanque_id":"%s","temp_c":%s}
+                """.formatted(id, RECORDED_AT, pondId, tempC));
+    }
 }
