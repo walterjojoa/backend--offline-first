@@ -34,4 +34,8 @@ public class EventIngestion {
     }
 
     private final EventStore store;
+
+    private final PushJsonAdapter adapter;
+
+    private final EventIngestors ingestors;
 }
