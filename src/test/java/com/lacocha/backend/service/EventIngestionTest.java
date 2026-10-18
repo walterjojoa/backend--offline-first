@@ -223,4 +223,20 @@ class EventIngestionTest {
         assertThat(store.stored.values()).singleElement()
                 .satisfies(e -> assertThat(e.getSource()).isEqualTo("manual"));
     }
+
+    @Test
+    void aReadingOutOfRangeRaisesAnAlertAndAnIdenticalOneDoesNotRepeatIt() {
+        store.parents.add(pondId);
+
+        EventIngestion.Outcome first = ingest(reading(UUID.randomUUID(), 22.0));
+        assertThat(first.alertsCreated()).isEqualTo(1);
+        assertThat(store.alerts).singleElement()
+                .satisfies(a -> assertThat(a.getVariable()).isEqualTo("temp_c"));
+
+        // The sensor measures every few seconds: repeating the alert would bury the pending one
+        EventIngestion.Outcome second = ingest(reading(UUID.randomUUID(), 22.5));
+        assertThat(second.accepted()).hasSize(1);
+        assertThat(second.alertsCreated()).isZero();
+        assertThat(store.alerts).hasSize(1);
+    }
 }
