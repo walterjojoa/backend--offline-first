@@ -25,7 +25,7 @@ import com.lacocha.backend.dto.Queries.FryCountResponse;
 import com.lacocha.backend.dto.Queries.MortalityResponse;
 import com.lacocha.backend.dto.Queries.WaterReadingResponse;
 import com.lacocha.backend.dto.Sync.AlertResponse;
-import com.lacocha.backend.service.QueryService;
+import com.lacocha.backend.service.PisciculturaFacade;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -35,10 +35,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "Consultas")
 public class QueryController {
 
-    private final QueryService service;
+    private final PisciculturaFacade facade;
 
-    public QueryController(QueryService service) {
-        this.service = service;
+    public QueryController(PisciculturaFacade facade) {
+        this.facade = facade;
     }
 
     @GetMapping("/estanques/{id}/lecturas")
@@ -48,7 +48,7 @@ public class QueryController {
             @RequestParam(name = "desde", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime since,
             @RequestParam(name = "hasta", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime until,
             @RequestParam(name = "limite", defaultValue = "500") int limit) {
-        return service.pondReadings(id, toInstant(since), toInstant(until), limit);
+        return facade.pondReadings(id, toInstant(since), toInstant(until), limit);
     }
 
     @GetMapping(value = "/estanques/{id}/lecturas.csv", produces = "text/csv")
@@ -57,7 +57,7 @@ public class QueryController {
             @PathVariable UUID id,
             @RequestParam(name = "desde", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime since,
             @RequestParam(name = "hasta", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime until) {
-        List<WaterReadingResponse> list = service.pondReadings(id, toInstant(since), toInstant(until), 5000);
+        List<WaterReadingResponse> list = facade.pondReadings(id, toInstant(since), toInstant(until), 5000);
         // CSV headers match the JSON names
         StringBuilder csv = new StringBuilder("registrado_en,temp_c,ph,oxigeno_mg_l,origen\n");
         // Oldest to newest, as expected in a spreadsheet
@@ -79,41 +79,41 @@ public class QueryController {
     @Operation(summary = "Mínimo, máximo y promedio diario de temperatura y pH (para gráficas)")
     public List<DailyReadings> dailyReadings(@PathVariable UUID id,
             @RequestParam(name = "dias", defaultValue = "7") int days) {
-        return service.dailyReadings(id, days);
+        return facade.dailyReadings(id, days);
     }
 
     @GetMapping("/lotes/{id}/conteos")
     @Operation(summary = "Historial de conteos de alevinos del lote")
     public List<FryCountResponse> fryCounts(@PathVariable UUID id,
             @RequestParam(name = "limite", defaultValue = "100") int limit) {
-        return service.fryCounts(id, limit);
+        return facade.fryCounts(id, limit);
     }
 
     @GetMapping("/lotes/{id}/mortalidades")
     @Operation(summary = "Historial de mortalidad del lote")
     public List<MortalityResponse> mortalities(@PathVariable UUID id,
             @RequestParam(name = "limite", defaultValue = "100") int limit) {
-        return service.mortalities(id, limit);
+        return facade.mortalities(id, limit);
     }
 
     @GetMapping("/lotes/{id}/alimentaciones")
     @Operation(summary = "Historial de alimentación del lote")
     public List<FeedingResponse> feedings(@PathVariable UUID id,
             @RequestParam(name = "limite", defaultValue = "100") int limit) {
-        return service.feedings(id, limit);
+        return facade.feedings(id, limit);
     }
 
     @GetMapping("/lotes/{id}/biometrias")
     @Operation(summary = "Historial de biometrías (peso promedio) del lote")
     public List<BiometryResponse> biometries(@PathVariable UUID id,
             @RequestParam(name = "limite", defaultValue = "100") int limit) {
-        return service.biometries(id, limit);
+        return facade.biometries(id, limit);
     }
 
     @GetMapping("/lotes/{id}/resumen")
     @Operation(summary = "Población, supervivencia, biomasa y ración sugerida del lote")
     public BatchSummary batchSummary(@PathVariable UUID id) {
-        return service.batchSummary(id);
+        return facade.batchSummary(id);
     }
 
     @GetMapping("/alertas")
@@ -122,7 +122,7 @@ public class QueryController {
             @RequestParam(name = "pendientes", defaultValue = "true") boolean pendingOnly,
             @RequestParam(name = "estanque_id", required = false) UUID pondId,
             @RequestParam(name = "limite", defaultValue = "100") int limit) {
-        return service.listAlerts(pendingOnly, pondId, limit);
+        return facade.listAlerts(pendingOnly, pondId, limit);
     }
 
     @PostMapping("/alertas/{id}/atender")
@@ -130,7 +130,7 @@ public class QueryController {
     public AlertResponse attendAlert(
             @PathVariable UUID id,
             @RequestParam(name = "dispositivo_id", required = false) String deviceId) {
-        return service.attendAlert(id, deviceId != null ? deviceId : "panel");
+        return facade.attendAlert(id, deviceId != null ? deviceId : "panel");
     }
 
     private static Instant toInstant(OffsetDateTime date) {
