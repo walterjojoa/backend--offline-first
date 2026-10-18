@@ -48,4 +48,14 @@ public class PisciculturaFacade {
     private final SyncService sync;
 
     private final DeviceService devices;
+
+    // ---------- Catalog: ponds and batches, editable from the panel and from any phone ----------
+
+    public List<PondResponse> listPonds() {
+        return catalog.listPonds();
+    }
+
+    public PondResponse getPond(UUID id) {
+        return catalog.getPond(id);
+    }
 }
