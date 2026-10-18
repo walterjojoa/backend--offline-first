@@ -138,4 +138,35 @@ class EventIngestionTest {
     private EventIngestion.Outcome ingest(JsonNode... items) {
         return ingestion.ingest(List.of(items), "cel-prueba", SERVER_TIME);
     }
+
+    @Test
+    void acceptsACountAndStampsWhoSentItAndWhenItArrived() {
+        store.parents.add(batchId);
+        UUID id = UUID.randomUUID();
+
+        EventIngestion.Outcome outcome = ingest(count(id, 1200));
+
+        assertThat(outcome.accepted()).containsExactly(id);
+        assertThat(outcome.rejected()).isEmpty();
+        FryCount saved = (FryCount) store.stored.values().iterator().next();
+        assertThat(saved.getTotal()).isEqualTo(1200);
+        assertThat(saved.getMultipleCuts()).isEqualTo(2);
+        assertThat(saved.getSource()).isEqualTo("contador");
+        assertThat(saved.getDeviceId()).isEqualTo("cel-prueba");
+        assertThat(saved.getReceivedAt()).isEqualTo(SERVER_TIME);
+        assertThat(saved.getRecordedAt()).isEqualTo(OffsetDateTime.parse(RECORDED_AT).toInstant());
+    }
+
+    @Test
+    void theSameEventTwiceIsADuplicateAndIsStoredOnce() {
+        store.parents.add(batchId);
+        UUID id = UUID.randomUUID();
+
+        assertThat(ingest(count(id, 500)).accepted()).containsExactly(id);
+        EventIngestion.Outcome retry = ingest(count(id, 500));
+
+        assertThat(retry.duplicates()).containsExactly(id);
+        assertThat(retry.accepted()).isEmpty();
+        assertThat(store.stored).hasSize(1);
+    }
 }
