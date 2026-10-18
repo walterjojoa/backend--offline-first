@@ -187,4 +187,16 @@ class EventIngestionTest {
             assertThat(r.error()).isEqualTo("lote_id: no existe");
         });
     }
+
+    @Test
+    void theRejectionNamesTheFieldAsTheJsonNamesIt() {
+        store.parents.add(batchId);
+        UUID id = UUID.randomUUID();
+        JsonNode negative = json("""
+                {"tipo":"conteo","id":"%s","registrado_en":"%s","lote_id":"%s","total":-5}
+                """.formatted(id, RECORDED_AT, batchId));
+
+        assertThat(ingest(negative).rejected()).singleElement()
+                .satisfies(r -> assertThat(r.error()).startsWith("total:"));
+    }
 }
