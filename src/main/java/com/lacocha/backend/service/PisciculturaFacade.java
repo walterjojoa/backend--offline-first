@@ -96,4 +96,8 @@ public class PisciculturaFacade {
     public List<FryCountResponse> fryCounts(UUID batchId, int limit) {
         return queries.fryCounts(batchId, limit);
     }
+
+    public List<MortalityResponse> mortalities(UUID batchId, int limit) {
+        return queries.mortalities(batchId, limit);
+    }
 }
