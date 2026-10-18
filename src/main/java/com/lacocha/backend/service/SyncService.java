@@ -2,10 +2,7 @@ package com.lacocha.backend.service;
 
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -15,27 +12,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import com.lacocha.backend.dto.Catalog.BatchResponse;
 import com.lacocha.backend.dto.Catalog.BatchSync;
 import com.lacocha.backend.dto.Catalog.PondResponse;
 import com.lacocha.backend.dto.Catalog.PondSync;
-import com.lacocha.backend.dto.Events;
-import com.lacocha.backend.dto.Events.Input;
-import com.lacocha.backend.dto.Events.WaterReadingInput;
-import com.lacocha.backend.dto.JsonNames;
 import com.lacocha.backend.dto.Sync.AlertResponse;
 import com.lacocha.backend.dto.Sync.PullResponse;
 import com.lacocha.backend.dto.Sync.PushRequest;
 import com.lacocha.backend.dto.Sync.PushResponse;
 import com.lacocha.backend.dto.Sync.Rejection;
-import com.lacocha.backend.model.Alert;
 import com.lacocha.backend.model.Batch;
 import com.lacocha.backend.model.Device;
-import com.lacocha.backend.model.Event;
 import com.lacocha.backend.model.Pond;
 import com.lacocha.backend.model.ServerClock;
 import com.lacocha.backend.model.SyncLog;
@@ -43,16 +31,16 @@ import com.lacocha.backend.repository.AlertRepository;
 import com.lacocha.backend.repository.BatchRepository;
 import com.lacocha.backend.repository.DeviceRepository;
 import com.lacocha.backend.repository.PondRepository;
+import com.lacocha.backend.service.PushJsonAdapter.InvalidItem;
 
 import jakarta.persistence.EntityManager;
-import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Validator;
 
 /**
- * Offline-first synchronization with the caretaker's app.
+ * Offline-first synchronization with the app of the caretaker.
  *
- * push: the phone uploads whatever is pending in its queue. It is idempotent: if the signal drops halfway
- *       and the phone retries, repeated events come back in "duplicados" and are not stored twice.
+ * push: the phone uploads whatever is pending in its queue. It is idempotent: if the signal drops
+ *       halfway and the phone retries, repeated events come back in "duplicados" and are not stored
+ *       twice. The catalog is merged here; the events are handed over to EventIngestion.
  * pull: the phone downloads catalog changes made from the panel or from another phone.
  */
 @Service
@@ -65,21 +53,18 @@ public class SyncService {
     private final BatchRepository batches;
     private final AlertRepository alerts;
     private final DeviceRepository devices;
-    private final RuleParameters rules;
-    private final ObjectMapper mapper;
-    private final Validator validator;
+    private final PushJsonAdapter adapter;
+    private final EventIngestion events;
 
     public SyncService(EntityManager em, PondRepository ponds, BatchRepository batches,
-            AlertRepository alerts, DeviceRepository devices, RuleParameters rules, ObjectMapper mapper,
-            Validator validator) {
+            AlertRepository alerts, DeviceRepository devices, PushJsonAdapter adapter, EventIngestion events) {
         this.em = em;
         this.ponds = ponds;
         this.batches = batches;
         this.alerts = alerts;
         this.devices = devices;
-        this.rules = rules;
-        this.mapper = mapper;
-        this.validator = validator;
+        this.adapter = adapter;
+        this.events = events;
     }
 
     /** Result that is filled in during the push. */
@@ -91,25 +76,39 @@ public class SyncService {
         int alertsCreated = 0;
     }
 
-    /** A pond, batch or event that cannot be stored. It is rejected alone, the rest of the push goes on. */
-    private static class InvalidItem extends Exception {
-        InvalidItem(String message) {
-            super(message);
-        }
-    }
-
     @Transactional
     public PushResponse push(PushRequest request) {
         Instant serverTime = ServerClock.now();
         PushResult result = new PushResult();
         registerDevice(request.deviceId(), serverTime);
 
-        for (JsonNode raw : orEmpty(request.ponds())) {
+        mergePonds(orEmpty(request.ponds()), result);
+        em.flush();
+        mergeBatches(orEmpty(request.batches()), result);
+        // Flushed before the events: one of them may point at a batch that arrived in this same push
+        em.flush();
+
+        EventIngestion.Outcome outcome = events.ingest(orEmpty(request.events()), request.deviceId(), serverTime);
+        result.accepted.addAll(outcome.accepted());
+        result.duplicates.addAll(outcome.duplicates());
+        result.rejected.addAll(outcome.rejected());
+        result.alertsCreated += outcome.alertsCreated();
+
+        writeSyncLog(request.deviceId(), result, serverTime);
+        log.info("push from {}: {} accepted, {} duplicates, {} stale, {} rejected, {} alerts",
+                request.deviceId(), result.accepted.size(), result.duplicates.size(), result.stale.size(),
+                result.rejected.size(), result.alertsCreated);
+        return new PushResponse(result.accepted, result.duplicates, result.stale, result.rejected,
+                result.alertsCreated, serverTime);
+    }
+
+    private void mergePonds(List<JsonNode> items, PushResult result) {
+        for (JsonNode raw : items) {
             PondSync p;
             try {
-                p = parse(raw, PondSync.class);
+                p = adapter.read(raw, PondSync.class);
             } catch (InvalidItem ex) {
-                result.rejected.add(new Rejection(rawId(raw), ex.getMessage()));
+                result.rejected.add(new Rejection(PushJsonAdapter.rawId(raw), ex.getMessage()));
                 continue;
             }
             String error = Dates.deviceDateError(p.updatedAt());
@@ -141,14 +140,15 @@ public class SyncService {
             }
             result.accepted.add(p.id());
         }
-        em.flush();
+    }
 
-        for (JsonNode raw : orEmpty(request.batches())) {
+    private void mergeBatches(List<JsonNode> items, PushResult result) {
+        for (JsonNode raw : items) {
             BatchSync b;
             try {
-                b = parse(raw, BatchSync.class);
+                b = adapter.read(raw, BatchSync.class);
             } catch (InvalidItem ex) {
-                result.rejected.add(new Rejection(rawId(raw), ex.getMessage()));
+                result.rejected.add(new Rejection(PushJsonAdapter.rawId(raw), ex.getMessage()));
                 continue;
             }
             String error = Dates.deviceDateError(b.updatedAt());
@@ -195,52 +195,6 @@ public class SyncService {
             }
             result.accepted.add(b.id());
         }
-        em.flush();
-
-        Set<UUID> knownParents = new HashSet<>();
-        for (JsonNode raw : orEmpty(request.events())) {
-            Input event;
-            try {
-                event = readEvent(raw);
-            } catch (InvalidItem ex) {
-                result.rejected.add(new Rejection(rawId(raw), ex.getMessage()));
-                continue;
-            }
-
-            if (!knownParents.contains(event.parentId())) {
-                Class<?> parentType = event.parentIsPond() ? Pond.class : Batch.class;
-                if (em.find(parentType, event.parentId()) == null) {
-                    String field = event.parentIsPond() ? "estanque_id" : "lote_id";
-                    result.rejected.add(new Rejection(event.id().toString(), field + ": no existe"));
-                    continue;
-                }
-                knownParents.add(event.parentId());
-            }
-
-            Event entity = event.toEntity();
-            if (em.find(entity.getClass(), event.id()) != null) {
-                result.duplicates.add(event.id());
-                continue;
-            }
-            entity.setId(event.id());
-            entity.setDeviceId(request.deviceId());
-            entity.setSource(event.source() != null ? event.source() : "manual");
-            entity.setRecordedAt(event.recordedAt().toInstant());
-            entity.setReceivedAt(serverTime);
-            em.persist(entity);
-            result.accepted.add(event.id());
-
-            if (event instanceof WaterReadingInput reading) {
-                result.alertsCreated += createAlerts(reading);
-            }
-        }
-
-        writeSyncLog(request.deviceId(), result, serverTime);
-        log.info("push from {}: {} accepted, {} duplicates, {} stale, {} rejected, {} alerts",
-                request.deviceId(), result.accepted.size(), result.duplicates.size(), result.stale.size(),
-                result.rejected.size(), result.alertsCreated);
-        return new PushResponse(result.accepted, result.duplicates, result.stale, result.rejected,
-                result.alertsCreated, serverTime);
     }
 
     /**
@@ -280,29 +234,6 @@ public class SyncService {
         em.persist(entry);
     }
 
-    /** Runs the expert system on a reading and stores the alerts. Returns how many were created. */
-    private int createAlerts(WaterReadingInput reading) {
-        int created = 0;
-        for (Rules.Result rule : rules.current().evaluateReading(reading.tempC(), reading.ph(), reading.oxygenMgL())) {
-            // The sensor measures every few seconds: if an identical alert is already pending, do not repeat it
-            if (alerts.existsByPondIdAndVariableAndLevelAndAttendedFalse(
-                    reading.pondId(), rule.variable(), rule.level())) {
-                continue;
-            }
-            Alert alert = new Alert();
-            alert.setPondId(reading.pondId());
-            alert.setReadingId(reading.id());
-            alert.setVariable(rule.variable());
-            alert.setValue(rule.value());
-            alert.setLevel(rule.level());
-            alert.setMessage(rule.message());
-            alert.setMeasuredAt(reading.recordedAt().toInstant());
-            em.persist(alert);
-            created++;
-        }
-        return created;
-    }
-
     /** since is the servidor_en returned by the previous pull. Without it, everything is downloaded. */
     @Transactional(readOnly = true)
     public PullResponse pull(Instant since) {
@@ -314,64 +245,6 @@ public class SyncService {
                 batchList.stream().map(BatchResponse::from).toList(),
                 alerts.findTop100ByAttendedFalseOrderByMeasuredAtDesc().stream().map(AlertResponse::from).toList(),
                 serverTime);
-    }
-
-    private Input readEvent(JsonNode raw) throws InvalidItem {
-        if (raw == null || !raw.isObject()) {
-            throw new InvalidItem("el evento debe ser un objeto JSON");
-        }
-        Class<? extends Input> type = Events.TYPES.get(raw.path("tipo").asText(""));
-        if (type == null) {
-            throw new InvalidItem("tipo: debe ser uno de " + String.join(", ", Events.TYPES.keySet()));
-        }
-
-        Input event = parse(raw, type);
-        String error = Dates.deviceDateError(event.recordedAt());
-        if (error != null) {
-            throw new InvalidItem("registrado_en: " + error);
-        }
-        error = event.extraError();
-        if (error != null) {
-            throw new InvalidItem(error);
-        }
-        return event;
-    }
-
-    /** JSON -> record, plus its annotations (@NotNull, @Size...). The error names the field as in the JSON. */
-    private <T> T parse(JsonNode raw, Class<T> type) throws InvalidItem {
-        if (raw == null || !raw.isObject()) {
-            throw new InvalidItem("debe ser un objeto JSON");
-        }
-        T value;
-        try {
-            value = mapper.treeToValue(raw, type);
-        } catch (JsonProcessingException ex) {
-            throw new InvalidItem(fieldWithError(ex) + ": formato no válido");
-        }
-
-        Set<ConstraintViolation<T>> violations = validator.validate(value);
-        if (!violations.isEmpty()) {
-            ConstraintViolation<T> v = violations.stream()
-                    .min(Comparator.comparing(x -> x.getPropertyPath().toString()))
-                    .get();
-            throw new InvalidItem(JsonNames.of(type, v.getPropertyPath().toString()) + ": " + v.getMessage());
-        }
-        return value;
-    }
-
-    /** Jackson already reports the path with the JSON names. */
-    private static String fieldWithError(JsonProcessingException ex) {
-        if (ex instanceof MismatchedInputException m && !m.getPath().isEmpty()) {
-            String field = m.getPath().get(m.getPath().size() - 1).getFieldName();
-            if (field != null) {
-                return field;
-            }
-        }
-        return "dato";
-    }
-
-    private static String rawId(JsonNode raw) {
-        return raw != null && raw.hasNonNull("id") ? raw.get("id").asText() : null;
     }
 
     private static <T> List<T> orEmpty(List<T> list) {
