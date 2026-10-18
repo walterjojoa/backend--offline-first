@@ -84,4 +84,50 @@ class EventIngestionTest {
                  "estanque_id":"%s","temp_c":%s}
                 """.formatted(id, RECORDED_AT, pondId, tempC));
     }
+
+    /** Implementor of the Bridge for the tests. It keeps the one rule the real store also applies. */
+    static final class InMemoryEventStore implements EventStore {
+
+        final Map<String, Event> stored = new LinkedHashMap<>();
+        final List<Alert> alerts = new ArrayList<>();
+        final Set<UUID> parents = new HashSet<>();
+
+        /** Each kind of event has its own table, so the key is the table and the id, not the id alone. */
+        private static String key(Event event) {
+            return event.getClass().getSimpleName() + ":" + event.getId();
+        }
+
+        @Override
+        public boolean exists(Event event) {
+            return stored.containsKey(key(event));
+        }
+
+        @Override
+        public void save(Event event) {
+            stored.put(key(event), event);
+        }
+
+        @Override
+        public boolean parentExists(boolean parentIsPond, UUID parentId) {
+            return parents.contains(parentId);
+        }
+
+        @Override
+        public int saveNewAlerts(List<Alert> candidates) {
+            int created = 0;
+            for (Alert candidate : candidates) {
+                boolean alreadyPending = alerts.stream()
+                        .anyMatch(a -> a.getPondId().equals(candidate.getPondId())
+                                && a.getVariable().equals(candidate.getVariable())
+                                && a.getLevel().equals(candidate.getLevel()));
+                if (!alreadyPending) {
+                    alerts.add(candidate);
+                    created++;
+                }
+            }
+            return created;
+        }
+    }
+
+    private final InMemoryEventStore store = new InMemoryEventStore();
 }
