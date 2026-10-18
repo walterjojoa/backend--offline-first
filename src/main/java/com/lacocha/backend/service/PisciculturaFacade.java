@@ -139,4 +139,8 @@ public class PisciculturaFacade {
     public DeviceResponse updateDevice(String id, DeviceUpdate data) {
         return devices.update(id, data);
     }
+
+    public List<SyncLogResponse> syncLog(String deviceId) {
+        return devices.syncLog(deviceId);
+    }
 }
