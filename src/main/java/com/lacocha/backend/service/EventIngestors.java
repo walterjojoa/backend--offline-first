@@ -130,4 +130,7 @@ public class EventIngestors {
             return store.saveNewAlerts(candidates);
         }
     }
+
+    /** LinkedHashMap so the error message always lists the tags in the same order. */
+    private final Map<String, Factory> byTipo = new LinkedHashMap<>();
 }
