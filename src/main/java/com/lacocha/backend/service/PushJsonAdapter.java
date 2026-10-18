@@ -39,4 +39,10 @@ public class PushJsonAdapter {
     private final Validator validator;
 
     private final EventIngestors ingestors;
+
+    public PushJsonAdapter(ObjectMapper mapper, Validator validator, EventIngestors ingestors) {
+        this.mapper = mapper;
+        this.validator = validator;
+        this.ingestors = ingestors;
+    }
 }
