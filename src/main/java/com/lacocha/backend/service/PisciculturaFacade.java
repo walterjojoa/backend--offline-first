@@ -127,4 +127,8 @@ public class PisciculturaFacade {
     public PushResponse push(PushRequest request) {
         return sync.push(request);
     }
+
+    public PullResponse pull(Instant since) {
+        return sync.pull(since);
+    }
 }
