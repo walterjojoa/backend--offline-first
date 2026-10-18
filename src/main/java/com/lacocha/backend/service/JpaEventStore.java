@@ -20,8 +20,8 @@ import jakarta.persistence.EntityManager;
  */
 @Component
 public class JpaEventStore implements EventStore {
-    private final EntityManager em;
 
+    private final EntityManager em;
     private final AlertRepository alerts;
 
     public JpaEventStore(EntityManager em, AlertRepository alerts) {
@@ -45,5 +45,19 @@ public class JpaEventStore implements EventStore {
         // In a variable and not inline: the ternary of two entity classes defeats type inference
         Class<?> parent = parentIsPond ? Pond.class : Batch.class;
         return em.find(parent, parentId) != null;
+    }
+
+    @Override
+    public int saveNewAlerts(List<Alert> candidates) {
+        int created = 0;
+        for (Alert alert : candidates) {
+            if (alerts.existsByPondIdAndVariableAndLevelAndAttendedFalse(
+                    alert.getPondId(), alert.getVariable(), alert.getLevel())) {
+                continue;
+            }
+            em.persist(alert);
+            created++;
+        }
+        return created;
     }
 }
