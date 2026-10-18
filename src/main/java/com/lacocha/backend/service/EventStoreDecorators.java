@@ -17,6 +17,7 @@ import com.lacocha.backend.model.Event;
  * ingestion pipeline nor the JPA store knows they are there, and turning one off is not wrapping it.
  */
 public final class EventStoreDecorators {
+
     private EventStoreDecorators() {
     }
 
@@ -73,6 +74,33 @@ public final class EventStoreDecorators {
             inner.save(event);
             log.debug("stored {} {} from {} (origen {})", event.getClass().getSimpleName(), event.getId(),
                     event.getDeviceId(), event.getSource());
+        }
+    }
+
+    /**
+     * Counts what was stored by "origen". The thesis compares the counter against counting by hand,
+     * and this answers how much of what arrived the machine actually measured without running a
+     * query. It lives for one push: counting two pushes together would say nothing.
+     */
+    public static final class SourceTally extends Decorator {
+
+        private final Map<String, Integer> bySource = new TreeMap<>();
+
+        public SourceTally(EventStore inner) {
+            super(inner);
+        }
+
+        @Override
+        public void save(Event event) {
+            inner.save(event);
+            bySource.merge(event.getSource(), 1, Integer::sum);
+        }
+
+        /** "contador=120, manual=3". Empty when the push carried no events. */
+        public String summary() {
+            return bySource.entrySet().stream()
+                    .map(entry -> entry.getKey() + "=" + entry.getValue())
+                    .collect(Collectors.joining(", "));
         }
     }
 }
