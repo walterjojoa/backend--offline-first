@@ -145,4 +145,13 @@ public class PisciculturaFacade {
     }
 
     private final RuleParameters parameters;
+
+    public PisciculturaFacade(CatalogService catalog, QueryService queries, SyncService sync,
+            DeviceService devices, RuleParameters parameters) {
+        this.catalog = catalog;
+        this.queries = queries;
+        this.sync = sync;
+        this.devices = devices;
+        this.parameters = parameters;
+    }
 }
