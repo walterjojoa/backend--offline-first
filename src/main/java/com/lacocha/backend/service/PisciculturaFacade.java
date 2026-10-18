@@ -70,4 +70,8 @@ public class PisciculturaFacade {
     public List<BatchResponse> listBatches(UUID pondId, String status) {
         return catalog.listBatches(pondId, status);
     }
+
+    public BatchResponse getBatch(UUID id) {
+        return catalog.getBatch(id);
+    }
 }
