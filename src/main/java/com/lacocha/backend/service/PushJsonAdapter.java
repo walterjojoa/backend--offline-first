@@ -50,4 +50,15 @@ public class PushJsonAdapter {
     public static String rawId(JsonNode raw) {
         return raw != null && raw.hasNonNull("id") ? raw.get("id").asText() : null;
     }
+
+    /** Jackson already reports the path with the JSON names. */
+    private static String fieldWithError(JsonProcessingException ex) {
+        if (ex instanceof MismatchedInputException m && !m.getPath().isEmpty()) {
+            String field = m.getPath().get(m.getPath().size() - 1).getFieldName();
+            if (field != null) {
+                return field;
+            }
+        }
+        return "dato";
+    }
 }
