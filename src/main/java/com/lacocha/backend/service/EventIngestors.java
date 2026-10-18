@@ -143,4 +143,9 @@ public class EventIngestors {
         register(new Plain("alimentacion", FeedingInput.class));
         register(new Plain("biometria", BiometryInput.class));
     }
+
+    private void register(Factory factory) {
+        byTipo.put(factory.tipo(), factory);
+        byInputType.put(factory.inputType(), factory);
+    }
 }
