@@ -113,4 +113,8 @@ public class PisciculturaFacade {
     public BatchSummary batchSummary(UUID batchId) {
         return queries.batchSummary(batchId);
     }
+
+    public List<AlertResponse> listAlerts(boolean pendingOnly, UUID pondId, int limit) {
+        return queries.listAlerts(pendingOnly, pondId, limit);
+    }
 }
