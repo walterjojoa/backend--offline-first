@@ -130,4 +130,12 @@ class EventIngestionTest {
     }
 
     private final InMemoryEventStore store = new InMemoryEventStore();
+
+    private final EventIngestion ingestion = new EventIngestion(store,
+            new PushJsonAdapter(mapper, Validation.buildDefaultValidatorFactory().getValidator(), ingestors),
+            ingestors);
+
+    private EventIngestion.Outcome ingest(JsonNode... items) {
+        return ingestion.ingest(List.of(items), "cel-prueba", SERVER_TIME);
+    }
 }
