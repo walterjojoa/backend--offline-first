@@ -34,4 +34,9 @@ public class JpaEventStore implements EventStore {
         // Each kind of event has its own table, so the id is only looked up in the right one
         return em.find(event.getClass(), event.getId()) != null;
     }
+
+    @Override
+    public void save(Event event) {
+        em.persist(event);
+    }
 }
