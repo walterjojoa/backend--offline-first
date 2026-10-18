@@ -82,4 +82,10 @@ public class PisciculturaFacade {
     public BatchResponse updateBatch(UUID id, BatchUpdate data) {
         return catalog.updateBatch(id, data);
     }
+
+    // ---------- Reading the events the devices uploaded ----------
+
+    public List<WaterReadingResponse> pondReadings(UUID pondId, Instant since, Instant until, int limit) {
+        return queries.pondReadings(pondId, since, until, limit);
+    }
 }
