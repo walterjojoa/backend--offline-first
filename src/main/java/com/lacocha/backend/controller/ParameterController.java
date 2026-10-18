@@ -5,7 +5,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.lacocha.backend.dto.Parameters.ParametersResponse;
-import com.lacocha.backend.service.RuleParameters;
+import com.lacocha.backend.service.PisciculturaFacade;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -15,15 +15,15 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "Parámetros")
 public class ParameterController {
 
-    private final RuleParameters parameters;
+    private final PisciculturaFacade facade;
 
-    public ParameterController(RuleParameters parameters) {
-        this.parameters = parameters;
+    public ParameterController(PisciculturaFacade facade) {
+        this.facade = facade;
     }
 
     @GetMapping("/parametros")
     @Operation(summary = "Umbrales de calidad de agua y curva de alimentación, con su fuente")
     public ParametersResponse parameters() {
-        return parameters.response();
+        return facade.parameters();
     }
 }
