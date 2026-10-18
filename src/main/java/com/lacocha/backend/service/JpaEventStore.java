@@ -28,4 +28,10 @@ public class JpaEventStore implements EventStore {
         this.em = em;
         this.alerts = alerts;
     }
+
+    @Override
+    public boolean exists(Event event) {
+        // Each kind of event has its own table, so the id is only looked up in the right one
+        return em.find(event.getClass(), event.getId()) != null;
+    }
 }
