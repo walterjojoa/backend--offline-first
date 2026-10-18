@@ -117,4 +117,8 @@ public class PisciculturaFacade {
     public List<AlertResponse> listAlerts(boolean pendingOnly, UUID pondId, int limit) {
         return queries.listAlerts(pendingOnly, pondId, limit);
     }
+
+    public AlertResponse attendAlert(UUID id, String who) {
+        return queries.attendAlert(id, who);
+    }
 }
