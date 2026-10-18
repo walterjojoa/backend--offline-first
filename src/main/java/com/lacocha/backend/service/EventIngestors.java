@@ -55,4 +55,31 @@ public class EventIngestors {
             return cached;
         }
     }
+
+    /** Events that are only stored: a count, a mortality, a feeding, a biometry. */
+    public static final class Plain extends Factory {
+
+        private final String tipo;
+        private final Class<? extends Input> inputType;
+
+        public Plain(String tipo, Class<? extends Input> inputType) {
+            this.tipo = tipo;
+            this.inputType = inputType;
+        }
+
+        @Override
+        public String tipo() {
+            return tipo;
+        }
+
+        @Override
+        public Class<? extends Input> inputType() {
+            return inputType;
+        }
+
+        @Override
+        protected Ingestor createIngestor() {
+            return (event, store) -> 0;
+        }
+    }
 }
