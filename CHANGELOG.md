@@ -1,5 +1,22 @@
 # Cambios
 
+## Sin publicar
+
+### Cambios
+- Los controladores hablan solo con `PisciculturaFacade`, no con cinco servicios (patrón Facade).
+- `SyncService.push()` baja de 143 a 24 líneas: el camino de los eventos se movió a `EventIngestion`,
+  que sostiene un `EventStore` y no conoce JPA (patrón Bridge), y el JSON crudo lo traduce
+  `PushJsonAdapter` (patrón Adapter).
+- Qué dispara alertas ya no se decide con un `instanceof`: lo decide la fábrica de `EventIngestors`
+  (patrón Factory Method), que es además la única lista de las etiquetas del protocolo. Se quitó
+  `Events.TYPES`, que repetía esa lista.
+
+### Nuevo
+- El log de cada push dice qué se guardó por `origen` (`contador=120, manual=3`), para comparar el
+  contador contra el conteo a mano sin consultar la base. Con el nivel en DEBUG, además una línea por
+  evento. Las dos cosas son decoradores de `EventStore` (patrón Decorator).
+- `EventIngestionTest`: las reglas del push probadas sin base de datos ni Spring (8 pruebas).
+
 ## 0.4.0
 
 ### Cambios
