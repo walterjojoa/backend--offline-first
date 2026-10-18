@@ -143,4 +143,6 @@ public class PisciculturaFacade {
     public List<SyncLogResponse> syncLog(String deviceId) {
         return devices.syncLog(deviceId);
     }
+
+    private final RuleParameters parameters;
 }
