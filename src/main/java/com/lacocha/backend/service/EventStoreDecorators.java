@@ -19,4 +19,34 @@ import com.lacocha.backend.model.Event;
 public final class EventStoreDecorators {
     private EventStoreDecorators() {
     }
+
+    /** Base: an EventStore that wraps another one and forwards everything untouched. */
+    public abstract static class Decorator implements EventStore {
+
+        protected final EventStore inner;
+
+        protected Decorator(EventStore inner) {
+            this.inner = inner;
+        }
+
+        @Override
+        public boolean exists(Event event) {
+            return inner.exists(event);
+        }
+
+        @Override
+        public void save(Event event) {
+            inner.save(event);
+        }
+
+        @Override
+        public boolean parentExists(boolean parentIsPond, UUID parentId) {
+            return inner.parentExists(parentIsPond, parentId);
+        }
+
+        @Override
+        public int saveNewAlerts(List<Alert> alerts) {
+            return inner.saveNewAlerts(alerts);
+        }
+    }
 }
