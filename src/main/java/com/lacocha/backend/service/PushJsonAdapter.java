@@ -61,4 +61,26 @@ public class PushJsonAdapter {
         }
         return "dato";
     }
+
+    /** JSON -> record, plus its annotations (@NotNull, @Size...). Ponds and batches come through here too. */
+    public <T> T read(JsonNode raw, Class<T> type) throws InvalidItem {
+        if (raw == null || !raw.isObject()) {
+            throw new InvalidItem("debe ser un objeto JSON");
+        }
+        T value;
+        try {
+            value = mapper.treeToValue(raw, type);
+        } catch (JsonProcessingException ex) {
+            throw new InvalidItem(fieldWithError(ex) + ": formato no válido");
+        }
+
+        Set<ConstraintViolation<T>> violations = validator.validate(value);
+        if (!violations.isEmpty()) {
+            ConstraintViolation<T> v = violations.stream()
+                    .min(Comparator.comparing(x -> x.getPropertyPath().toString()))
+                    .get();
+            throw new InvalidItem(JsonNames.of(type, v.getPropertyPath().toString()) + ": " + v.getMessage());
+        }
+        return value;
+    }
 }
