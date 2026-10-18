@@ -100,4 +100,8 @@ public class PisciculturaFacade {
     public List<MortalityResponse> mortalities(UUID batchId, int limit) {
         return queries.mortalities(batchId, limit);
     }
+
+    public List<FeedingResponse> feedings(UUID batchId, int limit) {
+        return queries.feedings(batchId, limit);
+    }
 }
