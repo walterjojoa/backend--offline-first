@@ -56,4 +56,8 @@ class EventIngestionTest {
     private final EventIngestors ingestors = new EventIngestors(TROUT);
 
     private static final Instant SERVER_TIME = Instant.parse("2026-10-18T21:00:00Z");
+
+    private static final String RECORDED_AT = "2026-10-18T15:30:00-05:00";
+
+    private final UUID batchId = UUID.randomUUID();
 }
