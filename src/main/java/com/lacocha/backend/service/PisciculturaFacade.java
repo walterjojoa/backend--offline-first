@@ -58,4 +58,12 @@ public class PisciculturaFacade {
     public PondResponse getPond(UUID id) {
         return catalog.getPond(id);
     }
+
+    public PondResponse createPond(PondCreate data) {
+        return catalog.createPond(data);
+    }
+
+    public PondResponse updatePond(UUID id, PondUpdate data) {
+        return catalog.updatePond(id, data);
+    }
 }
