@@ -1,8 +1,6 @@
 package com.lacocha.backend.dto;
 
 import java.time.OffsetDateTime;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -20,7 +18,10 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-/** Events uploaded by the phone. The JSON "tipo" field decides which of these records is used. */
+/**
+ * Events uploaded by the phone. The JSON "tipo" field decides which of these records is used; which
+ * tag maps to which record is decided in EventIngestors, the only list of the wire tags.
+ */
 public final class Events {
 
     private Events() {
@@ -48,17 +49,6 @@ public final class Events {
         default String extraError() {
             return null;
         }
-    }
-
-    /** JSON "tipo" -> record. LinkedHashMap so the error message lists them in order. */
-    public static final Map<String, Class<? extends Input>> TYPES = new LinkedHashMap<>();
-
-    static {
-        TYPES.put("lectura_agua", WaterReadingInput.class);
-        TYPES.put("conteo", FryCountInput.class);
-        TYPES.put("mortalidad", MortalityInput.class);
-        TYPES.put("alimentacion", FeedingInput.class);
-        TYPES.put("biometria", BiometryInput.class);
     }
 
     public record WaterReadingInput(
