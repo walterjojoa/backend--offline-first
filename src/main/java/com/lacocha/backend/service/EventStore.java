@@ -15,6 +15,7 @@ import com.lacocha.backend.model.Event;
  * without touching those rules.
  */
 public interface EventStore {
+
     /** true when an event with this id is already stored: the phone retried after losing signal. */
     boolean exists(Event event);
 
@@ -22,4 +23,11 @@ public interface EventStore {
 
     /** The pond (water readings) or batch (everything else) the event points at. */
     boolean parentExists(boolean parentIsPond, UUID parentId);
+
+    /**
+     * Stores the alerts that are not already pending for the same pond, variable and level, and
+     * returns how many were really created. The sensor measures every few seconds: repeating an
+     * identical alert would bury the one the caretaker has not attended yet.
+     */
+    int saveNewAlerts(List<Alert> alerts);
 }
