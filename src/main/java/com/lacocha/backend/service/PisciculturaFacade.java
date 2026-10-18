@@ -121,4 +121,10 @@ public class PisciculturaFacade {
     public AlertResponse attendAlert(UUID id, String who) {
         return queries.attendAlert(id, who);
     }
+
+    // ---------- Synchronization with the phones ----------
+
+    public PushResponse push(PushRequest request) {
+        return sync.push(request);
+    }
 }
