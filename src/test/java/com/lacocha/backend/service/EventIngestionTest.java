@@ -34,56 +34,6 @@ import jakarta.validation.Validation;
  * the HTTP API in ApiTest costs a full application context and an H2 schema.
  */
 class EventIngestionTest {
-    /** Fixed thresholds: this test is about the pipeline, not about what is good water for a trout. */
-    private static final RuleParameters TROUT = new RuleParameters(null, null, null) {
-        @Override
-        public Rules current() {
-            return RulesTest.TROUT;
-        }
-    };
-
-    /**
-     * Configured like the one Spring Boot hands the application: the same naming strategy
-     * application.properties sets (without it "temp_c" would not map) and unknown properties
-     * ignored, because every item carries a "tipo" field that no record of Events declares.
-     */
-    private final ObjectMapper mapper = JsonMapper.builder()
-            .addModule(new JavaTimeModule())
-            .propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
-            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-            .build();
-
-    private final EventIngestors ingestors = new EventIngestors(TROUT);
-
-    private static final Instant SERVER_TIME = Instant.parse("2026-10-18T21:00:00Z");
-
-    private static final String RECORDED_AT = "2026-10-18T15:30:00-05:00";
-
-    private final UUID batchId = UUID.randomUUID();
-
-    private final UUID pondId = UUID.randomUUID();
-
-    private JsonNode json(String raw) {
-        try {
-            return mapper.readTree(raw);
-        } catch (Exception ex) {
-            throw new IllegalArgumentException(ex);
-        }
-    }
-
-    private JsonNode count(UUID id, int total) {
-        return json("""
-                {"tipo":"conteo","id":"%s","registrado_en":"%s","origen":"contador",
-                 "lote_id":"%s","total":%d,"cortes_multiples":2}
-                """.formatted(id, RECORDED_AT, batchId, total));
-    }
-
-    private JsonNode reading(UUID id, double tempC) {
-        return json("""
-                {"tipo":"lectura_agua","id":"%s","registrado_en":"%s","origen":"sensor",
-                 "estanque_id":"%s","temp_c":%s}
-                """.formatted(id, RECORDED_AT, pondId, tempC));
-    }
 
     /** Implementor of the Bridge for the tests. It keeps the one rule the real store also applies. */
     static final class InMemoryEventStore implements EventStore {
@@ -129,11 +79,58 @@ class EventIngestionTest {
         }
     }
 
-    private final InMemoryEventStore store = new InMemoryEventStore();
+    /** Fixed thresholds: this test is about the pipeline, not about what is good water for a trout. */
+    private static final RuleParameters TROUT = new RuleParameters(null, null, null) {
+        @Override
+        public Rules current() {
+            return RulesTest.TROUT;
+        }
+    };
 
+    /**
+     * Configured like the one Spring Boot hands the application: the same naming strategy
+     * application.properties sets (without it "temp_c" would not map) and unknown properties
+     * ignored, because every item carries a "tipo" field that no record of Events declares.
+     */
+    private final ObjectMapper mapper = JsonMapper.builder()
+            .addModule(new JavaTimeModule())
+            .propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
+            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            .build();
+
+    private final InMemoryEventStore store = new InMemoryEventStore();
+    private final EventIngestors ingestors = new EventIngestors(TROUT);
     private final EventIngestion ingestion = new EventIngestion(store,
             new PushJsonAdapter(mapper, Validation.buildDefaultValidatorFactory().getValidator(), ingestors),
             ingestors);
+
+    private static final Instant SERVER_TIME = Instant.parse("2026-10-18T21:00:00Z");
+    private static final String RECORDED_AT = "2026-10-18T15:30:00-05:00";
+
+    private final UUID batchId = UUID.randomUUID();
+    private final UUID pondId = UUID.randomUUID();
+
+    private JsonNode json(String raw) {
+        try {
+            return mapper.readTree(raw);
+        } catch (Exception ex) {
+            throw new IllegalArgumentException(ex);
+        }
+    }
+
+    private JsonNode count(UUID id, int total) {
+        return json("""
+                {"tipo":"conteo","id":"%s","registrado_en":"%s","origen":"contador",
+                 "lote_id":"%s","total":%d,"cortes_multiples":2}
+                """.formatted(id, RECORDED_AT, batchId, total));
+    }
+
+    private JsonNode reading(UUID id, double tempC) {
+        return json("""
+                {"tipo":"lectura_agua","id":"%s","registrado_en":"%s","origen":"sensor",
+                 "estanque_id":"%s","temp_c":%s}
+                """.formatted(id, RECORDED_AT, pondId, tempC));
+    }
 
     private EventIngestion.Outcome ingest(JsonNode... items) {
         return ingestion.ingest(List.of(items), "cel-prueba", SERVER_TIME);
@@ -238,5 +235,16 @@ class EventIngestionTest {
         assertThat(second.accepted()).hasSize(1);
         assertThat(second.alertsCreated()).isZero();
         assertThat(store.alerts).hasSize(1);
+    }
+
+    @Test
+    void aCountNeverRaisesAlerts() {
+        store.parents.add(batchId);
+
+        EventIngestion.Outcome outcome = ingest(count(UUID.randomUUID(), 999_999));
+
+        assertThat(outcome.accepted()).hasSize(1);
+        assertThat(outcome.alertsCreated()).isZero();
+        assertThat(store.alerts).isEmpty();
     }
 }
