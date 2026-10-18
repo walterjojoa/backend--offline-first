@@ -24,6 +24,7 @@ import com.lacocha.backend.model.Alert;
  */
 @Component
 public class EventIngestors {
+
     /** What a kind of event triggers once it is stored. Returns how many alerts it created. */
     public interface Ingestor {
         int afterStore(Input event, EventStore store);
@@ -133,7 +134,6 @@ public class EventIngestors {
 
     /** LinkedHashMap so the error message always lists the tags in the same order. */
     private final Map<String, Factory> byTipo = new LinkedHashMap<>();
-
     private final Map<Class<? extends Input>, Factory> byInputType = new LinkedHashMap<>();
 
     public EventIngestors(RuleParameters rules) {
@@ -157,5 +157,9 @@ public class EventIngestors {
 
     public Set<String> tipos() {
         return byTipo.keySet();
+    }
+
+    public Ingestor forEvent(Input event) {
+        return byInputType.get(event.getClass()).ingestor();
     }
 }
