@@ -131,4 +131,8 @@ public class PisciculturaFacade {
     public PullResponse pull(Instant since) {
         return sync.pull(since);
     }
+
+    public List<DeviceResponse> listDevices() {
+        return devices.list();
+    }
 }
