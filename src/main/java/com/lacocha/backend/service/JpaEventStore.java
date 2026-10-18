@@ -23,4 +23,9 @@ public class JpaEventStore implements EventStore {
     private final EntityManager em;
 
     private final AlertRepository alerts;
+
+    public JpaEventStore(EntityManager em, AlertRepository alerts) {
+        this.em = em;
+        this.alerts = alerts;
+    }
 }
