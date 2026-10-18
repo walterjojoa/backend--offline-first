@@ -199,4 +199,15 @@ class EventIngestionTest {
         assertThat(ingest(negative).rejected()).singleElement()
                 .satisfies(r -> assertThat(r.error()).startsWith("total:"));
     }
+
+    @Test
+    void anUnknownTipoListsTheOnesTheServerAccepts() {
+        JsonNode unknown = json("""
+                {"tipo":"caudal","id":"%s","registrado_en":"%s"}
+                """.formatted(UUID.randomUUID(), RECORDED_AT));
+
+        assertThat(ingest(unknown).rejected()).singleElement()
+                .satisfies(r -> assertThat(r.error())
+                        .isEqualTo("tipo: debe ser uno de lectura_agua, conteo, mortalidad, alimentacion, biometria"));
+    }
 }
