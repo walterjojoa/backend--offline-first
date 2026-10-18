@@ -44,4 +44,8 @@ public class PisciculturaFacade {
     private final CatalogService catalog;
 
     private final QueryService queries;
+
+    private final SyncService sync;
+
+    private final DeviceService devices;
 }
