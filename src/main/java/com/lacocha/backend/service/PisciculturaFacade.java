@@ -135,4 +135,8 @@ public class PisciculturaFacade {
     public List<DeviceResponse> listDevices() {
         return devices.list();
     }
+
+    public DeviceResponse updateDevice(String id, DeviceUpdate data) {
+        return devices.update(id, data);
+    }
 }
