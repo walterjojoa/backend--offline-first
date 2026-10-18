@@ -43,6 +43,23 @@ Lo más importante que exige la base:
 Para probar las migraciones en PostgreSQL de verdad (además de H2): `docker compose up -d` y
 `.\mvnw spring-boot:run -Dspring-boot.run.profiles=postgres`.
 
+### Patrones de diseño
+
+`SyncService.push()` hacía cinco trabajos en 143 líneas: registrar el dispositivo, fusionar estanques,
+fusionar lotes, guardar los eventos y escribir la bitácora. Los cinco patrones están puestos en esas
+costuras, no de adorno. Hoy ese método tiene 24 líneas.
+
+| Patrón | Dónde | Qué problema resuelve |
+|---|---|---|
+| **Facade** | `service/PisciculturaFacade.java` | Los cinco controladores inyectaban cinco servicios distintos. Ahora inyectan uno. Un controlador solo tiene que saber su ruta, su JSON y qué caso de uso llamar; en qué servicio vive ese caso de uso, y si mañana se mueve, no es asunto suyo. |
+| **Adapter** | `service/PushJsonAdapter.java` | El celular y el ESP32 suben JSON sin tipo: una trama del contador llega como un objeto cuyo campo `tipo` es la única pista de qué es. Este es el único lugar que la convierte en un record ya validado, y que nombra el campo que falló como lo nombra el JSON y no como lo nombra Java. Es el gemelo en el servidor del `ArduinoSerialAdapter` de la app. |
+| **Factory Method** | `service/EventIngestors.java` | Antes había un `instanceof WaterReadingInput` enterrado en el push para decidir quién dispara alertas. Ahora cada subclase de `Factory` responde por un `tipo` del protocolo y decide quién lo atiende. Aceptar un evento nuevo es agregar una subclase y registrarla. Es además la **única** lista de las etiquetas del protocolo: `Events.TYPES` desapareció. |
+| **Bridge** | `service/EventStore.java` + `JpaEventStore.java` | `EventIngestion` tiene las reglas de qué se acepta, qué es duplicado y qué se rechaza, y sostiene un `EventStore` sin saber nunca cuál es. Nunca ve un `EntityManager`. Eso es lo que permite probar esas reglas sin base de datos (ver *Pruebas automáticas*). |
+| **Decorator** | `service/EventStoreDecorators.java` | Dos capacidades transversales que se envuelven desde fuera y se apilan. `SourceTally` cuenta lo guardado por `origen` y lo deja en el log (`events from cel-cuidador-1: contador=120, manual=3`): la tesis compara el contador contra el conteo a mano, y eso lo responde sin una consulta. `Trace` escribe una línea por evento y **solo se envuelve si su nivel está en DEBUG**, porque un push trae hasta 500. |
+
+Los decoradores se construyen por cada push, no una vez: un conteo por `origen` que sumara dos pushes
+distintos no diría nada.
+
 ### Idioma del código
 
 El código Java (clases, métodos, variables y comentarios) está en **inglés**. Lo que ve el usuario sigue
