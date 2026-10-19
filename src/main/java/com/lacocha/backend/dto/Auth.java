@@ -12,11 +12,11 @@ import jakarta.validation.constraints.Size;
 
 /** What goes in and out of /api/auth. The JSON stays in Spanish, like the rest of the API. */
 public final class Auth {
+
     private Auth() {
     }
 
     /** Digits only: it is an id number, and letting spaces or dots in makes it unmatchable later. */
-
     private static final String DOCUMENT = "\\d{5,20}";
 
     public record RegisterRequest(
@@ -48,5 +48,9 @@ public final class Auth {
     }
 
     /** The token travels once, in this answer. The server only keeps its hash. */
+    public record SessionResponse(
+            @JsonProperty("token") String token,
+            @JsonProperty("expira_en") Instant expiresAt,
+            @JsonProperty("usuario") UserResponse user) {
+    }
 }
-
