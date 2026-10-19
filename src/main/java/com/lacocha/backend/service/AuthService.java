@@ -113,5 +113,13 @@ public class AuthService {
         return userOf(token).map(UserResponse::from)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "La sesión no es válida"));
     }
+
+    private Optional<Session> currentSession(String token) {
+        if (token == null || token.isBlank()) {
+            return Optional.empty();
+        }
+        return sessions.findByTokenHash(hash(token))
+                .filter(s -> s.getClosedAt() == null && s.getExpiresAt().isAfter(ServerClock.now()));
+    }
 }
 
