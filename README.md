@@ -138,6 +138,27 @@ El celular borra de su cola todo lo que salga en cualquiera de esas listas.
 el último pull y las alertas pendientes. El cursor es la hora del servidor, no la del celular,
 para que un celular con el reloj atrasado no se pierda cambios.
 
+## Inicio de sesión y registro
+
+| Ruta | Qué hace |
+|---|---|
+| `POST /api/auth/registro` | Crea la cuenta y **deja la sesión ya iniciada** (un formulario menos) |
+| `POST /api/auth/sesion` | Entra con documento y clave |
+| `DELETE /api/auth/sesion` | Cierra la sesión del token enviado. Repetirlo no es un error |
+| `GET /api/auth/yo` | Quién es el dueño del token |
+
+La sesión viaja como `Authorization: Bearer <token>` y **dura seis meses** a propósito: la app
+funciona sin señal, y obligar a entrar cada semana dejaría al cuidador por fuera justo en la laguna.
+Lo que protege un celular perdido es el PIN local de la app más cerrar la sesión aquí.
+
+Dos detalles que son decisiones, no descuidos:
+
+- **La respuesta es la misma si el documento no existe o si la clave está mal.** Distinguirlas
+  dejaría averiguar qué documentos están registrados.
+- **Las contraseñas se guardan con BCrypt** (`spring-security-crypto`). Se trajo solo esa librería y
+  no Spring Security entero, que obligaría a reconfigurar CORS, el filtro de la clave y `/docs` sin
+  ganar nada aquí.
+
 ## Otros endpoints
 
 | Método | Ruta | Para qué |
