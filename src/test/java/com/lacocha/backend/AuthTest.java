@@ -140,5 +140,18 @@ class AuthTest {
 
         assertThat(error.get("detalle").asText()).contains("documento");
     }
+
+    // ---------- inicio de sesion ----------
+
+    @Test
+    void seEntraConElDocumentoYLaClave() throws Exception {
+        String document = newDocument();
+        register(document, "laguna2026");
+
+        JsonNode session = postJson("/api/auth/sesion", obj("documento", document, "clave", "laguna2026"), 200);
+
+        assertThat(session.get("token").asText()).isNotBlank();
+        assertThat(session.get("usuario").get("documento").asText()).isEqualTo(document);
+    }
 }
 
