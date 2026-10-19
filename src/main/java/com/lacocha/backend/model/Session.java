@@ -46,5 +46,13 @@ public class Session {
     public void setId(UUID id) { this.id = id; }
 
     public UUID getUserId() { return userId; }
+
+    public void setUserId(UUID userId) { this.userId = userId; }
+
+    public String getTokenHash() { return tokenHash; }
+
+    public void setTokenHash(String tokenHash) { this.tokenHash = tokenHash; }
+
+    public String getDeviceId() { return deviceId; }
 }
 
