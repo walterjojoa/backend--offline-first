@@ -6,26 +6,43 @@ import java.security.MessageDigest;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+
+import com.lacocha.backend.controller.Tokens;
+import com.lacocha.backend.service.AuthService;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-/** Every /api/** route requires the X-API-Key header. /salud and /docs stay open. */
+/**
+ * Every /api/** route needs one of two things: the shared X-API-Key, which is what the ESP32 node
+ * and a phone that has not signed in yet carry, or the session token of a user. Either one is
+ * enough, so adding people did not break the devices that were already syncing.
+ *
+ * Signing in and registering are the exception: they are how a phone gets a token, so they only
+ * need the key. /salud and /docs stay open.
+ */
 @Component
 public class ApiKeyFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(ApiKeyFilter.class);
 
     private final LaCochaProperties props;
+    private final ObjectProvider<AuthService> auth;
 
-    public ApiKeyFilter(LaCochaProperties props) {
+    /**
+     * The service is asked for lazily: the filter is built before the persistence layer is ready,
+     * and asking for it directly would make the two depend on each other at startup.
+     */
+    public ApiKeyFilter(LaCochaProperties props, ObjectProvider<AuthService> auth) {
         this.props = props;
+        this.auth = auth;
     }
 
     @Override
@@ -41,15 +58,27 @@ public class ApiKeyFilter extends OncePerRequestFilter {
             respond(response, HttpStatus.INTERNAL_SERVER_ERROR, "API_KEY no está configurada en el servidor");
             return;
         }
-        String received = request.getHeader("X-API-Key");
-        if (received == null || !MessageDigest.isEqual(
-                received.getBytes(StandardCharsets.UTF_8), expected.getBytes(StandardCharsets.UTF_8))) {
-            // Without logging the received key: only who tried and which route
-            log.warn("Rejected API key: {} {} from {}", request.getMethod(), request.getRequestURI(), clientIp(request));
-            respond(response, HttpStatus.UNAUTHORIZED, "Falta el encabezado X-API-Key o la clave no es válida");
+        if (hasValidKey(request, expected) || hasLiveSession(request)) {
+            chain.doFilter(request, response);
             return;
         }
-        chain.doFilter(request, response);
+        // Without logging the key or the token: only who tried and which route
+        log.warn("Rejected credentials: {} {} from {}", request.getMethod(), request.getRequestURI(), clientIp(request));
+        respond(response, HttpStatus.UNAUTHORIZED,
+                "Falta el encabezado X-API-Key o la sesión no es válida");
+    }
+
+    private static boolean hasValidKey(HttpServletRequest request, String expected) {
+        String received = request.getHeader("X-API-Key");
+        // Compared byte by byte in constant time so the answer does not leak the key
+        return received != null && MessageDigest.isEqual(
+                received.getBytes(StandardCharsets.UTF_8), expected.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private boolean hasLiveSession(HttpServletRequest request) {
+        String token = Tokens.of(request.getHeader("Authorization"));
+        AuthService service = auth.getIfAvailable();
+        return token != null && service != null && service.userOf(token).isPresent();
     }
 
     /** Render puts the real client IP in X-Forwarded-For. */
