@@ -165,5 +165,18 @@ class AuthTest {
         // El mismo mensaje en los dos casos: distinguirlos dejaria averiguar que documentos existen
         assertThat(conClaveMala.get("detalle").asText()).isEqualTo(sinCuenta.get("detalle").asText());
     }
+
+    @Test
+    void cadaIngresoAbreUnaSesionDistinta() throws Exception {
+        String document = newDocument();
+        String primero = register(document, "laguna2026");
+        String segundo = postJson("/api/auth/sesion", obj("documento", document, "clave", "laguna2026"), 200)
+                .get("token").asText();
+
+        // El cuidador puede tener la app en dos celulares; cerrar uno no bota el otro
+        assertThat(segundo).isNotEqualTo(primero);
+        send(get("/api/auth/yo").header("Authorization", "Bearer " + primero), 200);
+        send(get("/api/auth/yo").header("Authorization", "Bearer " + segundo), 200);
+    }
 }
 
