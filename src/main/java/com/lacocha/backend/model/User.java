@@ -15,60 +15,42 @@ import jakarta.persistence.Table;
 @Entity
 @Table(name = "usuarios")
 public class User {
+
     @Id
     private UUID id;
-
     /** The id number, which is what people on the farm know by heart. */
-
     @Column(name = "documento")
     private String document;
-
     @Column(name = "nombre")
     private String name;
-
     /** BCrypt. The plain password never reaches the database. */
-
     @Column(name = "clave_hash")
     private String passwordHash;
-
     /** cuidador = records in the field. productor = also sees the panel. */
-
     @Column(name = "rol")
     private String role = "cuidador";
-
     /** false = cannot sign in. Never deleted: their records still point here. */
-
     @Column(name = "activo")
     private boolean active = true;
-
     @Column(name = "creado_en")
     private Instant createdAt;
-
     @Column(name = "ultimo_ingreso_en")
     private Instant lastLoginAt;
 
     public UUID getId() { return id; }
-
     public void setId(UUID id) { this.id = id; }
-
     public String getDocument() { return document; }
-
     public void setDocument(String document) { this.document = document; }
-
     public String getName() { return name; }
-
     public void setName(String name) { this.name = name; }
-
     public String getPasswordHash() { return passwordHash; }
-
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
-
     public String getRole() { return role; }
-
     public void setRole(String role) { this.role = role; }
-
     public boolean isActive() { return active; }
-
     public void setActive(boolean active) { this.active = active; }
+    public Instant getCreatedAt() { return createdAt; }
+    public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
+    public Instant getLastLoginAt() { return lastLoginAt; }
+    public void setLastLoginAt(Instant lastLoginAt) { this.lastLoginAt = lastLoginAt; }
 }
-
