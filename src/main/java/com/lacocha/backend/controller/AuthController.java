@@ -22,6 +22,7 @@ import jakarta.validation.Valid;
 @RequestMapping("/api/auth")
 @Tag(name = "Autenticación")
 public class AuthController {
+
     private final PisciculturaFacade facade;
 
     public AuthController(PisciculturaFacade facade) {
@@ -45,5 +46,10 @@ public class AuthController {
     public void logout(@RequestHeader(name = "Authorization", required = false) String authorization) {
         facade.logout(Tokens.of(authorization));
     }
-}
 
+    @GetMapping("/yo")
+    @Operation(summary = "Quién es el dueño del token enviado")
+    public UserResponse me(@RequestHeader(name = "Authorization", required = false) String authorization) {
+        return facade.me(Tokens.of(authorization));
+    }
+}
