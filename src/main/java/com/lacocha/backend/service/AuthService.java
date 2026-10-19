@@ -100,5 +100,7 @@ public class AuthService {
     public void logout(String token) {
         currentSession(token).ifPresent(session -> session.setClosedAt(ServerClock.now()));
     }
+
+    /** The user behind a token, or empty when there is none, it expired or it was closed. */
 }
 
