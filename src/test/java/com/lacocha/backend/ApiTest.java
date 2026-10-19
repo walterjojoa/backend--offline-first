@@ -393,10 +393,13 @@ class ApiTest {
         MvcResult allowed = mvc.perform(options("/api/estanques")
                 .header("Origin", "http://localhost:5173")
                 .header("Access-Control-Request-Method", "PATCH")
-                .header("Access-Control-Request-Headers", "X-API-Key")).andReturn();
+                .header("Access-Control-Request-Headers", "X-API-Key, Authorization")).andReturn();
         assertThat(allowed.getResponse().getStatus()).isEqualTo(200);
         assertThat(allowed.getResponse().getHeader("Access-Control-Allow-Origin")).isEqualTo("http://localhost:5173");
         assertThat(allowed.getResponse().getHeader("Access-Control-Max-Age")).isEqualTo("3600");
+        // Sin estos dos el navegador bloquea la llamada y la app solo ve "no se pudo contactar"
+        assertThat(allowed.getResponse().getHeader("Access-Control-Allow-Headers")).contains("Authorization");
+        assertThat(allowed.getResponse().getHeader("Access-Control-Allow-Methods")).contains("DELETE");
 
         MvcResult foreign = mvc.perform(options("/api/estanques")
                 .header("Origin", "https://otro-sitio.com")
