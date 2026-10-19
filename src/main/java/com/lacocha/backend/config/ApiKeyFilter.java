@@ -64,8 +64,10 @@ public class ApiKeyFilter extends OncePerRequestFilter {
         }
         // Without logging the key or the token: only who tried and which route
         log.warn("Rejected credentials: {} {} from {}", request.getMethod(), request.getRequestURI(), clientIp(request));
+        // Two readers at once: the caretaker, who sees this in the app and needs to know what to
+        // do, and whoever is wiring up a device, who needs to know which header is missing
         respond(response, HttpStatus.UNAUTHORIZED,
-                "Falta el encabezado X-API-Key o la sesión no es válida");
+                "Tu sesión se venció o falta la clave del servidor (X-API-Key). Vuelve a entrar.");
     }
 
     private static boolean hasValidKey(HttpServletRequest request, String expected) {
