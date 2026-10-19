@@ -37,5 +37,14 @@ public class Session {
     private Instant expiresAt;
 
     /** Filled in on sign-out. The row stays: it is the log. */
+
+    @Column(name = "cerrada_en")
+    private Instant closedAt;
+
+    public UUID getId() { return id; }
+
+    public void setId(UUID id) { this.id = id; }
+
+    public UUID getUserId() { return userId; }
 }
 
