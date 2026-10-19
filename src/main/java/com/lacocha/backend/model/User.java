@@ -40,5 +40,17 @@ public class User {
 
     @Column(name = "activo")
     private boolean active = true;
+
+    @Column(name = "creado_en")
+    private Instant createdAt;
+
+    @Column(name = "ultimo_ingreso_en")
+    private Instant lastLoginAt;
+
+    public UUID getId() { return id; }
+
+    public void setId(UUID id) { this.id = id; }
+
+    public String getDocument() { return document; }
 }
 
