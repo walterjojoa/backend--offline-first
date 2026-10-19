@@ -7,6 +7,9 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 import com.lacocha.backend.dto.Auth.LoginRequest;
+import com.lacocha.backend.dto.Auth.PasswordChange;
+import com.lacocha.backend.dto.Auth.TemporaryPassword;
+import com.lacocha.backend.dto.Auth.UserUpdate;
 import com.lacocha.backend.dto.Auth.RegisterRequest;
 import com.lacocha.backend.dto.Auth.SessionResponse;
 import com.lacocha.backend.dto.Auth.UserResponse;
@@ -47,15 +50,17 @@ import com.lacocha.backend.dto.Sync.PushResponse;
 public class PisciculturaFacade {
 
     private final AuthService auth;
+    private final UserService people;
     private final CatalogService catalog;
     private final QueryService queries;
     private final SyncService sync;
     private final DeviceService devices;
     private final RuleParameters parameters;
 
-    public PisciculturaFacade(AuthService auth, CatalogService catalog, QueryService queries, SyncService sync,
-            DeviceService devices, RuleParameters parameters) {
+    public PisciculturaFacade(AuthService auth, UserService people, CatalogService catalog,
+            QueryService queries, SyncService sync, DeviceService devices, RuleParameters parameters) {
         this.auth = auth;
+        this.people = people;
         this.catalog = catalog;
         this.queries = queries;
         this.sync = sync;
@@ -80,6 +85,27 @@ public class PisciculturaFacade {
     /** Who owns the token, for the app to show the name and to check the session is still alive. */
     public UserResponse me(String token) {
         return auth.me(token);
+    }
+
+    // ---------- The people of the farm, which only the producer manages ----------
+
+    public List<UserResponse> listUsers(String token) {
+        auth.requireProducer(token);
+        return people.list();
+    }
+
+    public UserResponse updateUser(String token, UUID id, UserUpdate data) {
+        return people.update(id, data, auth.requireProducer(token));
+    }
+
+    /** Hands over a temporary password for someone who forgot theirs. */
+    public TemporaryPassword resetPassword(String token, UUID id) {
+        return people.resetPassword(id, auth.requireProducer(token));
+    }
+
+    /** Changing your own password. This is also how a temporary one stops being temporary. */
+    public void changePassword(String token, PasswordChange data) {
+        people.changePassword(auth.require(token), data);
     }
 
     // ---------- Catalog: ponds and batches, editable from the panel and from any phone ----------
@@ -165,15 +191,22 @@ public class PisciculturaFacade {
         return sync.pull(since);
     }
 
-    public List<DeviceResponse> listDevices() {
+    /**
+     * Devices and their log are the producer's business: deactivating a lost phone decides whose
+     * data still counts, and that is not something a caretaker should be able to do.
+     */
+    public List<DeviceResponse> listDevices(String token) {
+        auth.requireProducer(token);
         return devices.list();
     }
 
-    public DeviceResponse updateDevice(String id, DeviceUpdate data) {
+    public DeviceResponse updateDevice(String token, String id, DeviceUpdate data) {
+        auth.requireProducer(token);
         return devices.update(id, data);
     }
 
-    public List<SyncLogResponse> syncLog(String deviceId) {
+    public List<SyncLogResponse> syncLog(String token, String deviceId) {
+        auth.requireProducer(token);
         return devices.syncLog(deviceId);
     }
 
