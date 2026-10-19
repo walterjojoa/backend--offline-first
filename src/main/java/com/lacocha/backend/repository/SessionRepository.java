@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import com.lacocha.backend.model.Session;
 
 public interface SessionRepository extends JpaRepository<Session, UUID> {
-    /** Only the hash of the token is stored, so that is what a lookup goes by. */
-}
 
+    /** Only the hash of the token is stored, so that is what a lookup goes by. */
+    Optional<Session> findByTokenHash(String tokenHash);
+}
