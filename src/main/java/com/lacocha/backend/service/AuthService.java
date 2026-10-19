@@ -45,5 +45,9 @@ public class AuthService {
     private static final String BAD_CREDENTIALS = "El documento o la clave no son correctos";
 
     private final UserRepository users;
+
+    private final SessionRepository sessions;
+
+    private final DeviceRepository devices;
 }
 
