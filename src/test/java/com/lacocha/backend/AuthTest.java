@@ -34,5 +34,10 @@ class AuthTest {
     private static final String API_KEY = "clave-prueba";
 
     /** Documents are unique in the database, so every test gets its own. */
+
+    private static final AtomicLong NEXT_DOCUMENT = new AtomicLong(1_000_000_000L);
+
+    @Autowired
+    MockMvc mvc;
 }
 
