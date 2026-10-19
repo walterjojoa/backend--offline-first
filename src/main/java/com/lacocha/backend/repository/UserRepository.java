@@ -9,5 +9,7 @@ import com.lacocha.backend.model.User;
 
 public interface UserRepository extends JpaRepository<User, UUID> {
     /** The document is what the caretaker types to sign in. */
+
+    Optional<User> findByDocument(String document);
 }
 
