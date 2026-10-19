@@ -54,5 +54,13 @@ public class Session {
     public void setTokenHash(String tokenHash) { this.tokenHash = tokenHash; }
 
     public String getDeviceId() { return deviceId; }
+
+    public void setDeviceId(String deviceId) { this.deviceId = deviceId; }
+
+    public Instant getCreatedAt() { return createdAt; }
+
+    public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
+
+    public Instant getExpiresAt() { return expiresAt; }
 }
 
