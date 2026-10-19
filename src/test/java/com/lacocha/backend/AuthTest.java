@@ -193,5 +193,11 @@ class AuthTest {
         // El ESP32 y un celular que todavia no inicia sesion siguen entrando con la clave
         withKey(get("/api/estanques"), 200);
     }
+
+    @Test
+    void sinNingunaDeLasDosSeNiegaLaEntrada() throws Exception {
+        send(get("/api/estanques"), 401);
+        send(get("/api/estanques").header("Authorization", "Bearer no-es-un-token"), 401);
+    }
 }
 
