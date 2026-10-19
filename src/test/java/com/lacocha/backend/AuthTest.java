@@ -113,5 +113,24 @@ class AuthTest {
         assertThat(session.get("usuario").has("clave")).isFalse();
         assertThat(session.get("usuario").has("clave_hash")).isFalse();
     }
+
+    @Test
+    void noSePuedeRegistrarDosVecesElMismoDocumento() throws Exception {
+        String document = newDocument();
+        register(document, "laguna2026");
+
+        JsonNode error = postJson("/api/auth/registro",
+                obj("documento", document, "nombre", "Otra persona", "clave", "otraclave1"), 409);
+
+        assertThat(error.get("detalle").asText()).contains("Ya hay alguien registrado");
+    }
+
+    @Test
+    void laClaveCortaSeRechazaCon422YElMotivo() throws Exception {
+        JsonNode error = postJson("/api/auth/registro",
+                obj("documento", newDocument(), "nombre", "Don Luis", "clave", "corta"), 422);
+
+        assertThat(error.get("detalle").asText()).contains("clave");
+    }
 }
 
