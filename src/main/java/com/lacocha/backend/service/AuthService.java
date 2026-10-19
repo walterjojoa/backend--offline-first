@@ -102,5 +102,10 @@ public class AuthService {
     }
 
     /** The user behind a token, or empty when there is none, it expired or it was closed. */
+
+    @Transactional(readOnly = true)
+    public Optional<User> userOf(String token) {
+        return currentSession(token).map(Session::getUserId).flatMap(users::findById).filter(User::isActive);
+    }
 }
 
