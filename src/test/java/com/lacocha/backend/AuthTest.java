@@ -31,10 +31,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @SpringBootTest
 @AutoConfigureMockMvc
 class AuthTest {
+
     private static final String API_KEY = "clave-prueba";
 
     /** Documents are unique in the database, so every test gets its own. */
-
     private static final AtomicLong NEXT_DOCUMENT = new AtomicLong(1_000_000_000L);
 
     @Autowired
@@ -74,13 +74,11 @@ class AuthTest {
     }
 
     /** Closes a session the way the app does it: device key plus the token. */
-
     private void logout(String token, int expectedStatus) throws Exception {
         withKey(delete("/api/auth/sesion").header("Authorization", "Bearer " + token), expectedStatus);
     }
 
     /** Registers someone and returns their token. */
-
     private String register(String document, String password) throws Exception {
         JsonNode session = postJson("/api/auth/registro",
                 obj("documento", document, "nombre", "Don Luis", "clave", password), 200);
@@ -224,5 +222,13 @@ class AuthTest {
         // Y deja de abrir el resto de la API: es lo que protege un celular perdido
         send(get("/api/estanques").header("Authorization", "Bearer " + token), 401);
     }
-}
 
+    @Test
+    void cerrarDosVecesNoEsUnError() throws Exception {
+        String token = register(newDocument(), "laguna2026");
+
+        logout(token, 200);
+        // Sin señal la app reintenta: repetir el cierre tiene que ser inofensivo
+        logout(token, 200);
+    }
+}
