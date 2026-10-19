@@ -187,5 +187,11 @@ class AuthTest {
 
         send(get("/api/estanques").header("Authorization", "Bearer " + token), 200);
     }
+
+    @Test
+    void laClaveCompartidaSigueAbriendoLaApi() throws Exception {
+        // El ESP32 y un celular que todavia no inicia sesion siguen entrando con la clave
+        withKey(get("/api/estanques"), 200);
+    }
 }
 
