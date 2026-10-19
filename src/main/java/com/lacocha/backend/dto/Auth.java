@@ -40,11 +40,32 @@ public final class Auth {
             @JsonProperty("documento") String document,
             @JsonProperty("nombre") String name,
             @JsonProperty("rol") String role,
-            @JsonProperty("activo") boolean active) {
+            @JsonProperty("activo") boolean active,
+            /** true = la clave es temporal y hay que cambiarla antes de poder trabajar */
+            @JsonProperty("debe_cambiar_clave") boolean mustChangePassword) {
 
         public static UserResponse from(User u) {
-            return new UserResponse(u.getId(), u.getDocument(), u.getName(), u.getRole(), u.isActive());
+            return new UserResponse(u.getId(), u.getDocument(), u.getName(), u.getRole(), u.isActive(),
+                    u.isMustChangePassword());
         }
+    }
+
+    /** Lo que el productor puede cambiarle a otra persona. Los dos campos son opcionales. */
+    public record UserUpdate(
+            @JsonProperty("rol") @Pattern(regexp = "cuidador|productor") String role,
+            @JsonProperty("activo") Boolean active) {
+    }
+
+    /** La clave temporal viaja una sola vez, aquí. El servidor solo guarda su hash. */
+    public record TemporaryPassword(
+            @JsonProperty("clave_temporal") String password,
+            @JsonProperty("usuario") UserResponse user) {
+    }
+
+    public record PasswordChange(
+            @JsonProperty("clave_actual") @NotBlank String currentPassword,
+            @JsonProperty("clave_nueva") @NotBlank @Size(min = 8, max = 72,
+                    message = "debe tener entre 8 y 72 caracteres") String newPassword) {
     }
 
     /** The token travels once, in this answer. The server only keeps its hash. */
