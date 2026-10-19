@@ -39,5 +39,11 @@ public class AuthController {
     public SessionResponse login(@Valid @RequestBody LoginRequest data) {
         return facade.login(data);
     }
+
+    @DeleteMapping("/sesion")
+    @Operation(summary = "Cierra la sesión del token enviado")
+    public void logout(@RequestHeader(name = "Authorization", required = false) String authorization) {
+        facade.logout(Tokens.of(authorization));
+    }
 }
 
