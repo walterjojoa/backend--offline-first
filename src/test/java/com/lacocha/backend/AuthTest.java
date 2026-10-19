@@ -199,5 +199,16 @@ class AuthTest {
         send(get("/api/estanques"), 401);
         send(get("/api/estanques").header("Authorization", "Bearer no-es-un-token"), 401);
     }
+
+    @Test
+    void yoDiceQuienEsElDuenoDelToken() throws Exception {
+        String document = newDocument();
+        String token = register(document, "laguna2026");
+
+        JsonNode yo = send(get("/api/auth/yo").header("Authorization", "Bearer " + token), 200);
+
+        assertThat(yo.get("documento").asText()).isEqualTo(document);
+        assertThat(yo.get("nombre").asText()).isEqualTo("Don Luis");
+    }
 }
 
