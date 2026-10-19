@@ -34,5 +34,17 @@ public final class Auth {
             @JsonProperty("clave") @NotBlank String password,
             @JsonProperty("dispositivo_id") @Size(max = 64) String deviceId) {
     }
+
+    public record UserResponse(
+            UUID id,
+            @JsonProperty("documento") String document,
+            @JsonProperty("nombre") String name,
+            @JsonProperty("rol") String role,
+            @JsonProperty("activo") boolean active) {
+
+        public static UserResponse from(User u) {
+            return new UserResponse(u.getId(), u.getDocument(), u.getName(), u.getRole(), u.isActive());
+        }
+    }
 }
 
