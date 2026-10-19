@@ -78,5 +78,13 @@ class AuthTest {
     private void logout(String token, int expectedStatus) throws Exception {
         withKey(delete("/api/auth/sesion").header("Authorization", "Bearer " + token), expectedStatus);
     }
+
+    /** Registers someone and returns their token. */
+
+    private String register(String document, String password) throws Exception {
+        JsonNode session = postJson("/api/auth/registro",
+                obj("documento", document, "nombre", "Don Luis", "clave", password), 200);
+        return session.get("token").asText();
+    }
 }
 
