@@ -178,5 +178,14 @@ class AuthTest {
         send(get("/api/auth/yo").header("Authorization", "Bearer " + primero), 200);
         send(get("/api/auth/yo").header("Authorization", "Bearer " + segundo), 200);
     }
+
+    // ---------- la sesion sirve para entrar a la API ----------
+
+    @Test
+    void elTokenSoloAbreLaApiSinLaClaveCompartida() throws Exception {
+        String token = register(newDocument(), "laguna2026");
+
+        send(get("/api/estanques").header("Authorization", "Bearer " + token), 200);
+    }
 }
 
