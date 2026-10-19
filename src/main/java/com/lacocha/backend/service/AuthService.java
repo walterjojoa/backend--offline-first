@@ -38,20 +38,16 @@ import com.lacocha.backend.repository.UserRepository;
  */
 @Service
 public class AuthService {
-    /** Six months. Long enough for a season of stocking; short enough that an old phone drops off. */
 
+    /** Six months. Long enough for a season of stocking; short enough that an old phone drops off. */
     private static final Duration SESSION_LIFE = Duration.ofDays(180);
 
     private static final String BAD_CREDENTIALS = "El documento o la clave no son correctos";
 
     private final UserRepository users;
-
     private final SessionRepository sessions;
-
     private final DeviceRepository devices;
-
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-
     private final SecureRandom random = new SecureRandom();
 
     public AuthService(UserRepository users, SessionRepository sessions, DeviceRepository devices) {
@@ -95,14 +91,12 @@ public class AuthService {
     }
 
     /** Closes the session of the token that came with the request. Repeating it is not an error. */
-
     @Transactional
     public void logout(String token) {
         currentSession(token).ifPresent(session -> session.setClosedAt(ServerClock.now()));
     }
 
     /** The user behind a token, or empty when there is none, it expired or it was closed. */
-
     @Transactional(readOnly = true)
     public Optional<User> userOf(String token) {
         return currentSession(token).map(Session::getUserId).flatMap(users::findById).filter(User::isActive);
@@ -146,5 +140,13 @@ public class AuthService {
     private String known(String deviceId) {
         return deviceId != null && !deviceId.isBlank() && devices.existsById(deviceId) ? deviceId : null;
     }
-}
 
+    private static String hash(String token) {
+        try {
+            MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(sha256.digest(token.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("SHA-256 siempre existe en la JVM", ex);
+        }
+    }
+}
