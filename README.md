@@ -35,6 +35,8 @@ número. Para cambiar una tabla:
 Lo más importante que exige la base:
 
 - **Dispositivos:** cada evento apunta a un `dispositivo_id` registrado. El primer push lo registra solo.
+- **Usuarios y sesiones (V24):** el celular es el aparato y el usuario es la persona. En la finca se
+  prestan los celulares, así que son cosas distintas y la sesión apunta a las dos.
 - **Nombres únicos:** no se repite el nombre de un estanque ni el código de un lote dentro del mismo estanque.
 - **Lote cerrado** = tiene `fecha_cierre`, y no puede ser anterior a la siembra.
 - **Umbrales y curva de alimentación** viven en tablas (`parametros_rango`, `tasas_alimentacion`,
