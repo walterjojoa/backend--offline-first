@@ -39,5 +39,14 @@ class AuthTest {
 
     @Autowired
     MockMvc mvc;
+
+    @Autowired
+    ObjectMapper mapper;
+
+    // ---------- helpers ----------
+
+    static String newDocument() {
+        return String.valueOf(NEXT_DOCUMENT.incrementAndGet());
+    }
 }
 
