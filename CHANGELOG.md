@@ -2,6 +2,14 @@
 
 ## Sin publicar
 
+### Nuevo: quién usa la app
+- Tablas `usuarios` y `sesiones` (migración V24, copiada del repo base-de-datos).
+- `POST /api/auth/registro`, `POST /api/auth/sesion`, `DELETE /api/auth/sesion` y `GET /api/auth/yo`.
+- El filtro acepta **cualquiera de las dos credenciales**: el token de una persona o la clave
+  compartida. El ESP32 y los celulares que ya sincronizaban siguen entrando igual que antes.
+- Las claves se guardan con BCrypt; del token solo se guarda su SHA-256.
+- `AuthTest`: 14 pruebas del registro, el ingreso, el cierre y las dos credenciales.
+
 ### Cambios
 - Los controladores hablan solo con `PisciculturaFacade`, no con cinco servicios (patrón Facade).
 - `SyncService.push()` baja de 143 a 24 líneas: el camino de los eventos se movió a `EventIngestion`,
