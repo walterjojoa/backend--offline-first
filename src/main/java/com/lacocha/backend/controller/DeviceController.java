@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -32,19 +33,21 @@ public class DeviceController {
 
     @GetMapping("/dispositivos")
     @Operation(summary = "Celulares y nodos que sincronizan, con la última vez que lo hicieron")
-    public List<DeviceResponse> list() {
-        return facade.listDevices();
+    public List<DeviceResponse> list(@RequestHeader(name = "Authorization", required = false) String authorization) {
+        return facade.listDevices(Tokens.of(authorization));
     }
 
     @PatchMapping("/dispositivos/{id}")
     @Operation(summary = "Ponerle nombre a un dispositivo o darlo de baja")
-    public DeviceResponse update(@PathVariable String id, @Valid @RequestBody DeviceUpdate data) {
-        return facade.updateDevice(id, data);
+    public DeviceResponse update(@RequestHeader(name = "Authorization", required = false) String authorization,
+            @PathVariable String id, @Valid @RequestBody DeviceUpdate data) {
+        return facade.updateDevice(Tokens.of(authorization), id, data);
     }
 
     @GetMapping("/sincronizaciones")
     @Operation(summary = "Historial de envíos: aceptados, duplicados y rechazados de cada push")
-    public List<SyncLogResponse> syncLog(@RequestParam(name = "dispositivo_id", required = false) String deviceId) {
-        return facade.syncLog(deviceId);
+    public List<SyncLogResponse> syncLog(@RequestHeader(name = "Authorization", required = false) String authorization,
+            @RequestParam(name = "dispositivo_id", required = false) String deviceId) {
+        return facade.syncLog(Tokens.of(authorization), deviceId);
     }
 }
