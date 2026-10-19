@@ -26,5 +26,16 @@ public class Session {
 
     @Column(name = "token_hash")
     private String tokenHash;
+
+    @Column(name = "dispositivo_id")
+    private String deviceId;
+
+    @Column(name = "creada_en")
+    private Instant createdAt;
+
+    @Column(name = "expira_en")
+    private Instant expiresAt;
+
+    /** Filled in on sign-out. The row stays: it is the log. */
 }
 
