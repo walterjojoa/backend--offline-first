@@ -53,5 +53,30 @@ public class AuthService {
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
     private final SecureRandom random = new SecureRandom();
+
+    public AuthService(UserRepository users, SessionRepository sessions, DeviceRepository devices) {
+        this.users = users;
+        this.sessions = sessions;
+        this.devices = devices;
+    }
+
+    @Transactional
+    public SessionResponse register(RegisterRequest data) {
+        String document = data.document().trim();
+        if (users.existsByDocument(document)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya hay alguien registrado con ese documento");
+        }
+        User user = new User();
+        user.setId(UUID.randomUUID());
+        user.setDocument(document);
+        user.setName(data.name().trim());
+        user.setPasswordHash(encoder.encode(data.password()));
+        user.setRole("cuidador");
+        user.setActive(true);
+        user.setCreatedAt(ServerClock.now());
+        users.save(user);
+        // Signing in right after registering saves the caretaker from typing it all twice
+        return openSession(user, data.deviceId());
+    }
 }
 
