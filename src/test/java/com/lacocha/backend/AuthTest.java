@@ -210,5 +210,19 @@ class AuthTest {
         assertThat(yo.get("documento").asText()).isEqualTo(document);
         assertThat(yo.get("nombre").asText()).isEqualTo("Don Luis");
     }
+
+    // ---------- cerrar sesion ----------
+
+    @Test
+    void cerrarSesionDejaElTokenInservible() throws Exception {
+        String token = register(newDocument(), "laguna2026");
+        send(get("/api/auth/yo").header("Authorization", "Bearer " + token), 200);
+
+        logout(token, 200);
+
+        send(get("/api/auth/yo").header("Authorization", "Bearer " + token), 401);
+        // Y deja de abrir el resto de la API: es lo que protege un celular perdido
+        send(get("/api/estanques").header("Authorization", "Bearer " + token), 401);
+    }
 }
 
