@@ -78,5 +78,22 @@ public class AuthService {
         // Signing in right after registering saves the caretaker from typing it all twice
         return openSession(user, data.deviceId());
     }
+
+    @Transactional
+    public SessionResponse login(LoginRequest data) {
+        User user = users.findByDocument(data.document().trim()).orElse(null);
+        // The same message whether the document does not exist or the password is wrong: telling
+        // them apart would let anyone find out which documents are registered
+        if (user == null || !encoder.matches(data.password(), user.getPasswordHash())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, BAD_CREDENTIALS);
+        }
+        if (!user.isActive()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Esta cuenta está dada de baja");
+        }
+        user.setLastLoginAt(ServerClock.now());
+        return openSession(user, data.deviceId());
+    }
+
+    /** Closes the session of the token that came with the request. Repeating it is not an error. */
 }
 
