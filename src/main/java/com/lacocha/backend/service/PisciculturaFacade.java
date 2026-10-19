@@ -6,6 +6,10 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
+import com.lacocha.backend.dto.Auth.LoginRequest;
+import com.lacocha.backend.dto.Auth.RegisterRequest;
+import com.lacocha.backend.dto.Auth.SessionResponse;
+import com.lacocha.backend.dto.Auth.UserResponse;
 import com.lacocha.backend.dto.Catalog.BatchCreate;
 import com.lacocha.backend.dto.Catalog.BatchResponse;
 import com.lacocha.backend.dto.Catalog.BatchUpdate;
@@ -42,19 +46,40 @@ import com.lacocha.backend.dto.Sync.PushResponse;
 @Service
 public class PisciculturaFacade {
 
+    private final AuthService auth;
     private final CatalogService catalog;
     private final QueryService queries;
     private final SyncService sync;
     private final DeviceService devices;
     private final RuleParameters parameters;
 
-    public PisciculturaFacade(CatalogService catalog, QueryService queries, SyncService sync,
+    public PisciculturaFacade(AuthService auth, CatalogService catalog, QueryService queries, SyncService sync,
             DeviceService devices, RuleParameters parameters) {
+        this.auth = auth;
         this.catalog = catalog;
         this.queries = queries;
         this.sync = sync;
         this.devices = devices;
         this.parameters = parameters;
+    }
+
+    // ---------- Who is using the app ----------
+
+    public SessionResponse register(RegisterRequest data) {
+        return auth.register(data);
+    }
+
+    public SessionResponse login(LoginRequest data) {
+        return auth.login(data);
+    }
+
+    public void logout(String token) {
+        auth.logout(token);
+    }
+
+    /** Who owns the token, for the app to show the name and to check the session is still alive. */
+    public UserResponse me(String token) {
+        return auth.me(token);
     }
 
     // ---------- Catalog: ponds and batches, editable from the panel and from any phone ----------
