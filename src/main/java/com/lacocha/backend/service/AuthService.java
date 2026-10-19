@@ -95,5 +95,10 @@ public class AuthService {
     }
 
     /** Closes the session of the token that came with the request. Repeating it is not an error. */
+
+    @Transactional
+    public void logout(String token) {
+        currentSession(token).ifPresent(session -> session.setClosedAt(ServerClock.now()));
+    }
 }
 
