@@ -49,5 +49,9 @@ public class AuthService {
     private final SessionRepository sessions;
 
     private final DeviceRepository devices;
+
+    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+
+    private final SecureRandom random = new SecureRandom();
 }
 
