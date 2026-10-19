@@ -86,5 +86,32 @@ class AuthTest {
                 obj("documento", document, "nombre", "Don Luis", "clave", password), 200);
         return session.get("token").asText();
     }
+
+    // ---------- registro ----------
+
+    @Test
+    void registrarDejaLaSesionYaIniciada() throws Exception {
+        String document = newDocument();
+
+        JsonNode session = postJson("/api/auth/registro",
+                obj("documento", document, "nombre", "  Don Luis  ", "clave", "laguna2026"), 200);
+
+        assertThat(session.get("token").asText()).isNotBlank();
+        assertThat(session.get("expira_en").asText()).isNotBlank();
+        assertThat(session.get("usuario").get("documento").asText()).isEqualTo(document);
+        // El nombre se guarda sin los espacios de sobra que deja el teclado del celular
+        assertThat(session.get("usuario").get("nombre").asText()).isEqualTo("Don Luis");
+        assertThat(session.get("usuario").get("rol").asText()).isEqualTo("cuidador");
+    }
+
+    @Test
+    void laClaveNuncaVuelveEnLaRespuesta() throws Exception {
+        JsonNode session = postJson("/api/auth/registro",
+                obj("documento", newDocument(), "nombre", "Don Luis", "clave", "laguna2026"), 200);
+
+        assertThat(session.toString()).doesNotContain("laguna2026");
+        assertThat(session.get("usuario").has("clave")).isFalse();
+        assertThat(session.get("usuario").has("clave_hash")).isFalse();
+    }
 }
 
