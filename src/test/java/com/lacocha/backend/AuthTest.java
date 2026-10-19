@@ -48,5 +48,20 @@ class AuthTest {
     static String newDocument() {
         return String.valueOf(NEXT_DOCUMENT.incrementAndGet());
     }
+
+    static Map<String, Object> obj(Object... kv) {
+        Map<String, Object> m = new HashMap<>();
+        for (int i = 0; i < kv.length; i += 2) {
+            m.put((String) kv[i], kv[i + 1]);
+        }
+        return m;
+    }
+
+    private JsonNode send(MockHttpServletRequestBuilder req, int expectedStatus) throws Exception {
+        MvcResult res = mvc.perform(req).andReturn();
+        String body = res.getResponse().getContentAsString();
+        assertThat(res.getResponse().getStatus()).as(body).isEqualTo(expectedStatus);
+        return body.isEmpty() ? null : mapper.readTree(body);
+    }
 }
 
