@@ -27,5 +27,18 @@ public class User {
     private String name;
 
     /** BCrypt. The plain password never reaches the database. */
+
+    @Column(name = "clave_hash")
+    private String passwordHash;
+
+    /** cuidador = records in the field. productor = also sees the panel. */
+
+    @Column(name = "rol")
+    private String role = "cuidador";
+
+    /** false = cannot sign in. Never deleted: their records still point here. */
+
+    @Column(name = "activo")
+    private boolean active = true;
 }
 
