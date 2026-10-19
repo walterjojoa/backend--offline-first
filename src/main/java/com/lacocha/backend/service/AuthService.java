@@ -121,5 +121,26 @@ public class AuthService {
         return sessions.findByTokenHash(hash(token))
                 .filter(s -> s.getClosedAt() == null && s.getExpiresAt().isAfter(ServerClock.now()));
     }
+
+    private SessionResponse openSession(User user, String deviceId) {
+        Instant now = ServerClock.now();
+        // 32 random bytes: what the phone keeps. The server only ever stores its hash.
+        byte[] raw = new byte[32];
+        random.nextBytes(raw);
+        String token = Base64.getUrlEncoder().withoutPadding().encodeToString(raw);
+
+        Session session = new Session();
+        session.setId(UUID.randomUUID());
+        session.setUserId(user.getId());
+        session.setTokenHash(hash(token));
+        // dispositivo_id is a foreign key and the row is only created by the first push, so a
+        // phone that has not synced yet signs in with no device attached instead of failing
+        session.setDeviceId(known(deviceId));
+        session.setCreatedAt(now);
+        session.setExpiresAt(now.plus(SESSION_LIFE));
+        sessions.save(session);
+
+        return new SessionResponse(token, session.getExpiresAt(), UserResponse.from(user));
+    }
 }
 
