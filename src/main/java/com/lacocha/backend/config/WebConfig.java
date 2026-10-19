@@ -26,8 +26,10 @@ public class WebConfig {
     public FilterRegistrationBean<CorsFilter> corsFilter(LaCochaProperties props) {
         CorsConfiguration cors = new CorsConfiguration();
         cors.setAllowedOrigins(props.origins());
-        cors.setAllowedMethods(List.of("GET", "POST", "PATCH", "OPTIONS"));
-        cors.setAllowedHeaders(List.of("Content-Type", "X-API-Key"));
+        // DELETE cierra la sesión; Authorization lleva el token. Sin los dos, el navegador no deja
+        // pasar la llamada y la app solo ve "no se pudo contactar el servidor"
+        cors.setAllowedMethods(List.of("GET", "POST", "PATCH", "DELETE", "OPTIONS"));
+        cors.setAllowedHeaders(List.of("Content-Type", "X-API-Key", "Authorization"));
         // The browser caches the preflight response for an hour instead of repeating it on every call
         cors.setMaxAge(3600L);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
