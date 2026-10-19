@@ -23,5 +23,9 @@ import jakarta.validation.Valid;
 @Tag(name = "Autenticación")
 public class AuthController {
     private final PisciculturaFacade facade;
+
+    public AuthController(PisciculturaFacade facade) {
+        this.facade = facade;
+    }
 }
 
