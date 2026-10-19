@@ -36,6 +36,14 @@ public class User {
     private Instant createdAt;
     @Column(name = "ultimo_ingreso_en")
     private Instant lastLoginAt;
+    /** true while the password is a temporary one the producer handed over: it only opens the door. */
+    @Column(name = "debe_cambiar_clave")
+    private boolean mustChangePassword = false;
+    @Column(name = "clave_reiniciada_en")
+    private Instant passwordResetAt;
+    /** Who reset it. Signing in as someone else has to be written down somewhere. */
+    @Column(name = "clave_reiniciada_por")
+    private UUID passwordResetBy;
 
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
@@ -53,4 +61,12 @@ public class User {
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
     public Instant getLastLoginAt() { return lastLoginAt; }
     public void setLastLoginAt(Instant lastLoginAt) { this.lastLoginAt = lastLoginAt; }
+    public boolean isMustChangePassword() { return mustChangePassword; }
+    public void setMustChangePassword(boolean mustChangePassword) { this.mustChangePassword = mustChangePassword; }
+    public Instant getPasswordResetAt() { return passwordResetAt; }
+    public void setPasswordResetAt(Instant passwordResetAt) { this.passwordResetAt = passwordResetAt; }
+    public UUID getPasswordResetBy() { return passwordResetBy; }
+    public void setPasswordResetBy(UUID passwordResetBy) { this.passwordResetBy = passwordResetBy; }
+
+    public boolean isProducer() { return "productor".equals(role); }
 }
