@@ -107,5 +107,11 @@ public class AuthService {
     public Optional<User> userOf(String token) {
         return currentSession(token).map(Session::getUserId).flatMap(users::findById).filter(User::isActive);
     }
+
+    @Transactional(readOnly = true)
+    public UserResponse me(String token) {
+        return userOf(token).map(UserResponse::from)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "La sesión no es válida"));
+    }
 }
 
