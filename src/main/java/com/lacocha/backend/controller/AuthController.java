@@ -33,5 +33,11 @@ public class AuthController {
     public SessionResponse register(@Valid @RequestBody RegisterRequest data) {
         return facade.register(data);
     }
+
+    @PostMapping("/sesion")
+    @Operation(summary = "Inicia sesión con documento y clave")
+    public SessionResponse login(@Valid @RequestBody LoginRequest data) {
+        return facade.login(data);
+    }
 }
 
