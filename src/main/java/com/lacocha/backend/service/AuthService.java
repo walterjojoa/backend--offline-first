@@ -41,5 +41,9 @@ public class AuthService {
     /** Six months. Long enough for a season of stocking; short enough that an old phone drops off. */
 
     private static final Duration SESSION_LIFE = Duration.ofDays(180);
+
+    private static final String BAD_CREDENTIALS = "El documento o la clave no son correctos";
+
+    private final UserRepository users;
 }
 
