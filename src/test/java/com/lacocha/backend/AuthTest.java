@@ -153,5 +153,17 @@ class AuthTest {
         assertThat(session.get("token").asText()).isNotBlank();
         assertThat(session.get("usuario").get("documento").asText()).isEqualTo(document);
     }
+
+    @Test
+    void laClaveEquivocadaNoDiceSiElDocumentoExiste() throws Exception {
+        String document = newDocument();
+        register(document, "laguna2026");
+
+        JsonNode conClaveMala = postJson("/api/auth/sesion", obj("documento", document, "clave", "otraclave1"), 401);
+        JsonNode sinCuenta = postJson("/api/auth/sesion", obj("documento", newDocument(), "clave", "laguna2026"), 401);
+
+        // El mismo mensaje en los dos casos: distinguirlos dejaria averiguar que documentos existen
+        assertThat(conClaveMala.get("detalle").asText()).isEqualTo(sinCuenta.get("detalle").asText());
+    }
 }
 
