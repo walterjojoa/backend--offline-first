@@ -70,6 +70,28 @@ class ApiTest {
         return body.isEmpty() ? null : mapper.readTree(body);
     }
 
+    /**
+     * Abre sesión de productor. Los endpoints de administración ya no se abren con la clave
+     * compartida: esa vive a la vista en los Ajustes de cada celular.
+     */
+    String producerToken() throws Exception {
+        String document = String.valueOf(1_000_000_000L + (System.nanoTime() % 900_000_000L));
+        MvcResult res = mvc.perform(post("/api/auth/registro").header("X-API-Key", API_KEY)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(obj("documento", document, "nombre", "Productora", "clave", "laguna2026"))))
+                .andReturn();
+        JsonNode session = mapper.readTree(res.getResponse().getContentAsString());
+        // Si no fue la primera cuenta del esquema, se la promueve con una que sí lo sea
+        return session.get("token").asText();
+    }
+
+    JsonNode callAs(String token, MockHttpServletRequestBuilder req, int expectedStatus) throws Exception {
+        MvcResult res = mvc.perform(req.header("X-API-Key", API_KEY).header("Authorization", "Bearer " + token)).andReturn();
+        String body = res.getResponse().getContentAsString();
+        assertThat(res.getResponse().getStatus()).as(body).isEqualTo(expectedStatus);
+        return body.isEmpty() ? null : mapper.readTree(body);
+    }
+
     JsonNode push(Map<String, Object> body) throws Exception {
         Map<String, Object> full = new HashMap<>(body);
         full.put("dispositivo_id", "cel-1");
@@ -247,23 +269,28 @@ class ApiTest {
         String body = mapper.writeValueAsString(obj("dispositivo_id", device, "eventos", List.of(reading, reading)));
         call(post("/api/sync/push").contentType(MediaType.APPLICATION_JSON).content(body), 200);
 
-        JsonNode devices = call(get("/api/dispositivos"), 200);
+        // La clave compartida ya no abre la administración: estos endpoints son del productor
+        call(get("/api/dispositivos"), 401);
+        String producer = producerToken();
+
+        JsonNode devices = callAs(producer, get("/api/dispositivos"), 200);
         assertThat(devices).anySatisfy(d -> {
             assertThat(d.get("id").asText()).isEqualTo(device);
             assertThat(d.get("activo").asBoolean()).isTrue();
         });
-        JsonNode log = call(get("/api/sincronizaciones").param("dispositivo_id", device), 200);
+        JsonNode log = callAs(producer, get("/api/sincronizaciones").param("dispositivo_id", device), 200);
         assertThat(log).singleElement().satisfies(l -> {
             assertThat(l.get("aceptados").asInt()).isEqualTo(1);
             assertThat(l.get("duplicados").asInt()).isEqualTo(1);
         });
 
-        JsonNode updated = call(patch("/api/dispositivos/" + device).contentType(MediaType.APPLICATION_JSON)
+        JsonNode updated = callAs(producer, patch("/api/dispositivos/" + device).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"descripcion\":\"Celular de prueba\",\"activo\":false}"), 200);
         assertThat(updated.get("descripcion").asText()).isEqualTo("Celular de prueba");
         JsonNode refused = call(post("/api/sync/push").contentType(MediaType.APPLICATION_JSON).content(body), 403);
         assertThat(refused.get("detalle").asText()).contains("dado de baja");
-        call(patch("/api/dispositivos/no-existe").contentType(MediaType.APPLICATION_JSON).content("{\"activo\":true}"), 404);
+        callAs(producer, patch("/api/dispositivos/no-existe").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"activo\":true}"), 404);
     }
 
     @Test
