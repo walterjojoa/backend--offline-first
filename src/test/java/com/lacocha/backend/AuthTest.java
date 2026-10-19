@@ -132,5 +132,13 @@ class AuthTest {
 
         assertThat(error.get("detalle").asText()).contains("clave");
     }
+
+    @Test
+    void elDocumentoTieneQueSerUnNumeroDeDigitos() throws Exception {
+        JsonNode error = postJson("/api/auth/registro",
+                obj("documento", "no-es-numero", "nombre", "Don Luis", "clave", "laguna2026"), 422);
+
+        assertThat(error.get("detalle").asText()).contains("documento");
+    }
 }
 
