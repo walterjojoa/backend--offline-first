@@ -28,5 +28,11 @@ public final class Auth {
                     message = "debe tener entre 8 y 72 caracteres") String password,
             @JsonProperty("dispositivo_id") @Size(max = 64) String deviceId) {
     }
+
+    public record LoginRequest(
+            @JsonProperty("documento") @NotBlank String document,
+            @JsonProperty("clave") @NotBlank String password,
+            @JsonProperty("dispositivo_id") @Size(max = 64) String deviceId) {
+    }
 }
 
