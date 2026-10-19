@@ -72,5 +72,11 @@ class AuthTest {
         return withKey(post(path).contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(body)), expectedStatus);
     }
+
+    /** Closes a session the way the app does it: device key plus the token. */
+
+    private void logout(String token, int expectedStatus) throws Exception {
+        withKey(delete("/api/auth/sesion").header("Authorization", "Bearer " + token), expectedStatus);
+    }
 }
 
