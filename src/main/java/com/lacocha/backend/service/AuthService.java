@@ -8,6 +8,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.lacocha.backend.config.LaCochaProperties;
 import com.lacocha.backend.dto.Auth.LoginRequest;
 import com.lacocha.backend.dto.Auth.RegisterRequest;
 import com.lacocha.backend.dto.Auth.SessionResponse;
@@ -47,13 +49,16 @@ public class AuthService {
     private final UserRepository users;
     private final SessionRepository sessions;
     private final DeviceRepository devices;
+    private final LaCochaProperties props;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
     private final SecureRandom random = new SecureRandom();
 
-    public AuthService(UserRepository users, SessionRepository sessions, DeviceRepository devices) {
+    public AuthService(UserRepository users, SessionRepository sessions, DeviceRepository devices,
+            LaCochaProperties props) {
         this.users = users;
         this.sessions = sessions;
         this.devices = devices;
+        this.props = props;
     }
 
     @Transactional
@@ -67,7 +72,7 @@ public class AuthService {
         user.setDocument(document);
         user.setName(data.name().trim());
         user.setPasswordHash(encoder.encode(data.password()));
-        user.setRole("cuidador");
+        user.setRole(isProducer(document) ? "productor" : "cuidador");
         user.setActive(true);
         user.setCreatedAt(ServerClock.now());
         users.save(user);
@@ -88,6 +93,38 @@ public class AuthService {
         }
         user.setLastLoginAt(ServerClock.now());
         return openSession(user, data.deviceId());
+    }
+
+    /**
+     * Whoever was named in the configuration is a producer, and so is the first person to register
+     * when nobody was named: a farm that just installed the server has to be able to administer it.
+     */
+    private boolean isProducer(String document) {
+        List<String> named = props.producers();
+        return named.isEmpty() ? users.count() == 0 : named.contains(document);
+    }
+
+    /**
+     * The user behind the token, or 401. Every operation that is not signing in goes through here
+     * when it needs to know who is asking.
+     */
+    @Transactional(readOnly = true)
+    public User require(String token) {
+        return userOf(token)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "La sesión no es válida"));
+    }
+
+    /**
+     * The same, but only for the producer. The shared key is not enough for these: it sits in plain
+     * sight in every caretaker's Settings screen, so it cannot be what guards the farm's admin.
+     */
+    @Transactional(readOnly = true)
+    public User requireProducer(String token) {
+        User user = require(token);
+        if (!user.isProducer()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Esto solo lo puede hacer el productor");
+        }
+        return user;
     }
 
     /** Closes the session of the token that came with the request. Repeating it is not an error. */
