@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.lacocha.backend.dto.Auth.LoginRequest;
+import com.lacocha.backend.dto.Auth.PasswordChange;
 import com.lacocha.backend.dto.Auth.RegisterRequest;
 import com.lacocha.backend.dto.Auth.SessionResponse;
 import com.lacocha.backend.dto.Auth.UserResponse;
@@ -45,6 +46,13 @@ public class AuthController {
     @Operation(summary = "Cierra la sesión del token enviado")
     public void logout(@RequestHeader(name = "Authorization", required = false) String authorization) {
         facade.logout(Tokens.of(authorization));
+    }
+
+    @PostMapping("/clave")
+    @Operation(summary = "Cambiar la propia clave; así deja de ser temporal la que dio el productor")
+    public void changePassword(@RequestHeader(name = "Authorization", required = false) String authorization,
+            @Valid @RequestBody PasswordChange data) {
+        facade.changePassword(Tokens.of(authorization), data);
     }
 
     @GetMapping("/yo")
