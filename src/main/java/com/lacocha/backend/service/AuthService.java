@@ -142,5 +142,9 @@ public class AuthService {
 
         return new SessionResponse(token, session.getExpiresAt(), UserResponse.from(user));
     }
+
+    private String known(String deviceId) {
+        return deviceId != null && !deviceId.isBlank() && devices.existsById(deviceId) ? deviceId : null;
+    }
 }
 
