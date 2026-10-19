@@ -1,0 +1,30 @@
+package com.lacocha.backend.model;
+
+import java.time.Instant;
+import java.util.UUID;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+
+/**
+ * One sign-in that is still alive. A table and not a signed token (JWT) because what really
+ * happens on this farm is that a phone gets lost: with a row the session is closed and that is
+ * that, while a signed token would keep working until it expires with no way to revoke it.
+ */
+@Entity
+@Table(name = "sesiones")
+public class Session {
+    @Id
+    private UUID id;
+
+    @Column(name = "usuario_id")
+    private UUID userId;
+
+    /** SHA-256 of the token, never the token: a copy of the database is not a way in. */
+
+    @Column(name = "token_hash")
+    private String tokenHash;
+}
+
