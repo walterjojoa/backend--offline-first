@@ -27,5 +27,11 @@ public class AuthController {
     public AuthController(PisciculturaFacade facade) {
         this.facade = facade;
     }
+
+    @PostMapping("/registro")
+    @Operation(summary = "Crea la cuenta del cuidador y la deja ya iniciada")
+    public SessionResponse register(@Valid @RequestBody RegisterRequest data) {
+        return facade.register(data);
+    }
 }
 
