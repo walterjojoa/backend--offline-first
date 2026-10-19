@@ -63,5 +63,14 @@ class AuthTest {
         assertThat(res.getResponse().getStatus()).as(body).isEqualTo(expectedStatus);
         return body.isEmpty() ? null : mapper.readTree(body);
     }
+
+    private JsonNode withKey(MockHttpServletRequestBuilder req, int expectedStatus) throws Exception {
+        return send(req.header("X-API-Key", API_KEY), expectedStatus);
+    }
+
+    private JsonNode postJson(String path, Map<String, Object> body, int expectedStatus) throws Exception {
+        return withKey(post(path).contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(body)), expectedStatus);
+    }
 }
 
