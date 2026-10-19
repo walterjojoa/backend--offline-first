@@ -46,5 +46,7 @@ public final class Auth {
             return new UserResponse(u.getId(), u.getDocument(), u.getName(), u.getRole(), u.isActive());
         }
     }
+
+    /** The token travels once, in this answer. The server only keeps its hash. */
 }
 
