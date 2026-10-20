@@ -223,6 +223,64 @@ class AuthTest {
         send(get("/api/estanques").header("Authorization", "Bearer " + token), 401);
     }
 
+    // ---------- intentos fallidos ----------
+
+    private void tryLogin(String document, String password, int expectedStatus) throws Exception {
+        postJson("/api/auth/sesion", obj("documento", document, "clave", password), expectedStatus);
+    }
+
+    @Test
+    void cincoClavesMalasBloqueanElDocumentoAunqueLaSextaSeaLaBuena() throws Exception {
+        String document = newDocument();
+        register(document, "laguna2026");
+        for (int i = 0; i < 5; i++) {
+            tryLogin(document, "adivinando" + i, 401);
+        }
+
+        // Si la buena entrara, el bloqueo no detendria a quien prueba claves hasta acertar
+        JsonNode error = postJson("/api/auth/sesion", obj("documento", document, "clave", "laguna2026"), 429);
+        assertThat(error.get("detalle").asText()).contains("15 minutos");
+    }
+
+    @Test
+    void unDocumentoQueNoExisteSeBloqueaIgual() throws Exception {
+        String document = newDocument();
+        for (int i = 0; i < 5; i++) {
+            tryLogin(document, "adivinando" + i, 401);
+        }
+
+        // Si solo se bloquearan los que existen, el 429 diria cuales estan registrados
+        tryLogin(document, "adivinando5", 429);
+    }
+
+    @Test
+    void entrarBienBorraLosIntentosFallidos() throws Exception {
+        String document = newDocument();
+        register(document, "laguna2026");
+        for (int i = 0; i < 4; i++) {
+            tryLogin(document, "mal" + i + "tecleada", 401);
+        }
+        tryLogin(document, "laguna2026", 200);
+
+        // Otros cuatro errores no lo bloquean: la cuenta empezo de nuevo
+        for (int i = 0; i < 4; i++) {
+            tryLogin(document, "mal" + i + "tecleada", 401);
+        }
+        tryLogin(document, "laguna2026", 200);
+    }
+
+    @Test
+    void elBloqueoDeUnDocumentoNoAfectaAOtro() throws Exception {
+        String bloqueado = newDocument();
+        String vecino = newDocument();
+        register(vecino, "laguna2026");
+        for (int i = 0; i < 5; i++) {
+            tryLogin(bloqueado, "adivinando" + i, 401);
+        }
+
+        tryLogin(vecino, "laguna2026", 200);
+    }
+
     @Test
     void cerrarDosVecesNoEsUnError() throws Exception {
         String token = register(newDocument(), "laguna2026");

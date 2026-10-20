@@ -2,6 +2,15 @@
 
 ## Sin publicar
 
+### Seguridad
+- Con la clave temporal el token solo abre `/api/auth/**` (403 en lo demás si no trae la clave
+  compartida), y la administración responde 403 hasta cambiarla. Antes eso solo lo exigía la app.
+- Reiniciar la clave de alguien, o darlo de baja, cierra todas sus sesiones abiertas.
+- Cinco claves malas seguidas para un mismo documento lo bloquean 15 minutos (429), exista o no.
+- Iniciar sesión con un documento que no existe tarda lo mismo que con una clave equivocada.
+- `render.yaml` declara `PRODUCER_DOCUMENTS`.
+- `LoginThrottleTest` y 9 pruebas nuevas entre `AuthTest` y `RolesTest`.
+
 ### Nuevo: quién usa la app
 - Tablas `usuarios` y `sesiones` (migración V24, copiada del repo base-de-datos).
 - `POST /api/auth/registro`, `POST /api/auth/sesion`, `DELETE /api/auth/sesion` y `GET /api/auth/yo`.

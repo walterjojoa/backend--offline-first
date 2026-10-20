@@ -105,7 +105,7 @@ public class PisciculturaFacade {
 
     /** Changing your own password. This is also how a temporary one stops being temporary. */
     public void changePassword(String token, PasswordChange data) {
-        people.changePassword(auth.require(token), data);
+        people.changePassword(auth.requireAllowingTemporary(token), data);
     }
 
     // ---------- Catalog: ponds and batches, editable from the panel and from any phone ----------

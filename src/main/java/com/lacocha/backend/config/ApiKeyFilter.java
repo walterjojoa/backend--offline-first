@@ -3,6 +3,7 @@ package com.lacocha.backend.config;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.lacocha.backend.controller.Tokens;
+import com.lacocha.backend.model.User;
 import com.lacocha.backend.service.AuthService;
 
 import jakarta.servlet.FilterChain;
@@ -27,6 +29,9 @@ import jakarta.servlet.http.HttpServletResponse;
  *
  * Signing in and registering are the exception: they are how a phone gets a token, so they only
  * need the key. /salud and /docs stay open.
+ *
+ * A token whose password is still the temporary one only opens /api/auth/**, which is where it gets
+ * changed. With the key the rest stays open, as it is for any phone that carries it.
  */
 @Component
 public class ApiKeyFilter extends OncePerRequestFilter {
@@ -58,7 +63,16 @@ public class ApiKeyFilter extends OncePerRequestFilter {
             respond(response, HttpStatus.INTERNAL_SERVER_ERROR, "API_KEY no está configurada en el servidor");
             return;
         }
-        if (hasValidKey(request, expected) || hasLiveSession(request)) {
+        if (hasValidKey(request, expected)) {
+            chain.doFilter(request, response);
+            return;
+        }
+        Optional<User> user = sessionUser(request);
+        if (user.isPresent()) {
+            if (user.get().isMustChangePassword() && !request.getRequestURI().startsWith("/api/auth/")) {
+                respond(response, HttpStatus.FORBIDDEN, "Tienes que cambiar la clave temporal antes de seguir");
+                return;
+            }
             chain.doFilter(request, response);
             return;
         }
@@ -77,10 +91,10 @@ public class ApiKeyFilter extends OncePerRequestFilter {
                 received.getBytes(StandardCharsets.UTF_8), expected.getBytes(StandardCharsets.UTF_8));
     }
 
-    private boolean hasLiveSession(HttpServletRequest request) {
+    private Optional<User> sessionUser(HttpServletRequest request) {
         String token = Tokens.of(request.getHeader("Authorization"));
         AuthService service = auth.getIfAvailable();
-        return token != null && service != null && service.userOf(token).isPresent();
+        return token != null && service != null ? service.userOf(token) : Optional.empty();
     }
 
     /** Render puts the real client IP in X-Forwarded-For. */

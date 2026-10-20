@@ -51,6 +51,14 @@ class RolesTest {
         return m;
     }
 
+    /** Solo con el token, sin la clave compartida: así entra un cliente que ya inició sesión. */
+    private JsonNode tokenOnly(MockHttpServletRequestBuilder req, String token, int expectedStatus) throws Exception {
+        MvcResult res = mvc.perform(req.header("Authorization", "Bearer " + token)).andReturn();
+        String body = res.getResponse().getContentAsString();
+        assertThat(res.getResponse().getStatus()).as(body).isEqualTo(expectedStatus);
+        return body.isEmpty() ? null : mapper.readTree(body);
+    }
+
     private JsonNode call(MockHttpServletRequestBuilder req, String token, int expectedStatus) throws Exception {
         if (token != null) {
             req = req.header("Authorization", "Bearer " + token);
@@ -179,6 +187,88 @@ class RolesTest {
 
         JsonNode me = call(get("/api/auth/yo"), token, 200);
         assertThat(me.get("debe_cambiar_clave").asBoolean()).isFalse();
+    }
+
+    /** El productor le reinicia la clave a alguien; devuelve la temporal. */
+    private String resetPassword(JsonNode person) throws Exception {
+        return call(post("/api/usuarios/" + person.get("usuario").get("id").asText() + "/clave-temporal"),
+                producer().get("token").asText(), 200).get("clave_temporal").asText();
+    }
+
+    private String signIn(JsonNode person, String password) throws Exception {
+        return call(post("/api/auth/sesion").contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(obj("documento", person.get("usuario").get("documento").asText(),
+                        "clave", password))), null, 200).get("token").asText();
+    }
+
+    @Test
+    void conLaClaveTemporalElTokenSoloSirveParaCambiarla() throws Exception {
+        JsonNode person = register("claveolvidada");
+        String token = signIn(person, resetPassword(person));
+
+        // El productor la oyó cuando la dijo en voz alta: hasta cambiarla no abre nada más
+        JsonNode error = tokenOnly(get("/api/estanques"), token, 403);
+        assertThat(error.get("detalle").asText()).contains("clave temporal");
+        tokenOnly(get("/api/auth/yo"), token, 200);
+    }
+
+    @Test
+    void unProductorConClaveTemporalNoAdministraHastaCambiarla() throws Exception {
+        JsonNode other = register("laguna2026");
+        call(patch("/api/usuarios/" + other.get("usuario").get("id").asText()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"rol\":\"productor\"}"), producer().get("token").asText(), 200);
+        String temporary = resetPassword(other);
+        String token = signIn(other, temporary);
+
+        // Ni con la clave compartida: la administración pide la sesión, y esta todavía no vale
+        JsonNode error = call(get("/api/usuarios"), token, 403);
+        assertThat(error.get("detalle").asText()).contains("clave temporal");
+
+        call(post("/api/auth/clave").contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(obj("clave_actual", temporary, "clave_nueva", "laguna2027"))),
+                token, 200);
+        call(get("/api/usuarios"), token, 200);
+    }
+
+    @Test
+    void despuesDeCambiarLaTemporalElTokenAbreTodo() throws Exception {
+        JsonNode person = register("claveolvidada");
+        String temporary = resetPassword(person);
+        String token = signIn(person, temporary);
+
+        call(post("/api/auth/clave").contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(obj("clave_actual", temporary, "clave_nueva", "laguna2027"))),
+                token, 200);
+
+        tokenOnly(get("/api/estanques"), token, 200);
+    }
+
+    @Test
+    void reiniciarLaClaveCierraLasSesionesQueYaHabia() throws Exception {
+        JsonNode person = register("claveolvidada");
+        String oldToken = person.get("token").asText();
+        call(get("/api/auth/yo"), oldToken, 200);
+
+        resetPassword(person);
+
+        // Un celular perdido con la sesión abierta deja de entrar en cuanto el productor la reinicia
+        call(get("/api/auth/yo"), oldToken, 401);
+        tokenOnly(get("/api/estanques"), oldToken, 401);
+    }
+
+    @Test
+    void reactivarAAlguienNoReviveSusSesionesViejas() throws Exception {
+        JsonNode person = register("laguna2026");
+        String oldToken = person.get("token").asText();
+        String id = person.get("usuario").get("id").asText();
+        String producer = producer().get("token").asText();
+
+        call(patch("/api/usuarios/" + id).contentType(MediaType.APPLICATION_JSON).content("{\"activo\":false}"),
+                producer, 200);
+        call(patch("/api/usuarios/" + id).contentType(MediaType.APPLICATION_JSON).content("{\"activo\":true}"),
+                producer, 200);
+
+        call(get("/api/auth/yo"), oldToken, 401);
     }
 
     @Test

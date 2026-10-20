@@ -19,6 +19,7 @@ import com.lacocha.backend.dto.Auth.UserResponse;
 import com.lacocha.backend.dto.Auth.UserUpdate;
 import com.lacocha.backend.model.ServerClock;
 import com.lacocha.backend.model.User;
+import com.lacocha.backend.repository.SessionRepository;
 import com.lacocha.backend.repository.UserRepository;
 
 /**
@@ -39,11 +40,13 @@ public class UserService {
     private static final int TEMPORARY_LENGTH = 10;
 
     private final UserRepository users;
+    private final SessionRepository sessions;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
     private final SecureRandom random = new SecureRandom();
 
-    public UserService(UserRepository users) {
+    public UserService(UserRepository users, SessionRepository sessions) {
         this.users = users;
+        this.sessions = sessions;
     }
 
     @Transactional(readOnly = true)
@@ -67,6 +70,10 @@ public class UserService {
         }
         if (data.active() != null) {
             user.setActive(data.active());
+            if (!data.active()) {
+                // Otherwise reactivating them later would also bring back a lost phone's session
+                closeSessions(user);
+            }
         }
         return UserResponse.from(user);
     }
@@ -83,6 +90,9 @@ public class UserService {
         user.setMustChangePassword(true);
         user.setPasswordResetAt(ServerClock.now());
         user.setPasswordResetBy(producer.getId());
+        // Whoever forgot the password may have lost the phone with it, or someone else knows it:
+        // the sessions opened with the old one stop working, wherever they are
+        closeSessions(user);
         // Written down because with this the producer can sign in as someone else
         log.info("password reset for {} by {}", user.getDocument(), producer.getDocument());
         return new TemporaryPassword(temporary, UserResponse.from(user));
@@ -100,6 +110,11 @@ public class UserService {
         User stored = find(user.getId());
         stored.setPasswordHash(encoder.encode(data.newPassword()));
         stored.setMustChangePassword(false);
+    }
+
+    private void closeSessions(User user) {
+        sessions.findByUserIdAndClosedAtIsNull(user.getId())
+                .forEach(session -> session.setClosedAt(ServerClock.now()));
     }
 
     private User find(UUID id) {

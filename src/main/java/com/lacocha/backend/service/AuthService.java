@@ -46,19 +46,29 @@ public class AuthService {
 
     private static final String BAD_CREDENTIALS = "El documento o la clave no son correctos";
 
+    private static final String MUST_CHANGE = "Tienes que cambiar la clave temporal antes de seguir";
+
     private final UserRepository users;
     private final SessionRepository sessions;
     private final DeviceRepository devices;
     private final LaCochaProperties props;
+    private final LoginThrottle throttle;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
     private final SecureRandom random = new SecureRandom();
+    /**
+     * Checked against when the document does not exist, so that answer takes as long as a wrong
+     * password. Skipping BCrypt there would make it answer in a millisecond instead of a tenth of
+     * a second, and the clock would tell which documents are registered.
+     */
+    private final String unknownUserHash = encoder.encode("no-es-la-clave-de-nadie");
 
     public AuthService(UserRepository users, SessionRepository sessions, DeviceRepository devices,
-            LaCochaProperties props) {
+            LaCochaProperties props, LoginThrottle throttle) {
         this.users = users;
         this.sessions = sessions;
         this.devices = devices;
         this.props = props;
+        this.throttle = throttle;
     }
 
     @Transactional
@@ -82,12 +92,20 @@ public class AuthService {
 
     @Transactional
     public SessionResponse login(LoginRequest data) {
-        User user = users.findByDocument(data.document().trim()).orElse(null);
+        String document = data.document().trim();
+        if (throttle.isLocked(document)) {
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+                    "Demasiados intentos con ese documento. Espera 15 minutos y vuelve a probar.");
+        }
+        User user = users.findByDocument(document).orElse(null);
+        boolean matches = encoder.matches(data.password(), user != null ? user.getPasswordHash() : unknownUserHash);
         // The same message whether the document does not exist or the password is wrong: telling
         // them apart would let anyone find out which documents are registered
-        if (user == null || !encoder.matches(data.password(), user.getPasswordHash())) {
+        if (user == null || !matches) {
+            throttle.failed(document);
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, BAD_CREDENTIALS);
         }
+        throttle.succeeded(document);
         if (!user.isActive()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Esta cuenta está dada de baja");
         }
@@ -107,9 +125,23 @@ public class AuthService {
     /**
      * The user behind the token, or 401. Every operation that is not signing in goes through here
      * when it needs to know who is asking.
+     *
+     * A temporary password only opens the door: until it is changed the answer is 403. The app
+     * already sends the caretaker to change it, but the server cannot count on that, because the
+     * producer heard that password when they said it out loud.
      */
     @Transactional(readOnly = true)
     public User require(String token) {
+        User user = requireAllowingTemporary(token);
+        if (user.isMustChangePassword()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, MUST_CHANGE);
+        }
+        return user;
+    }
+
+    /** The same, but also for whoever is still on a temporary password: it is how they change it. */
+    @Transactional(readOnly = true)
+    public User requireAllowingTemporary(String token) {
         return userOf(token)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "La sesión no es válida"));
     }
