@@ -28,7 +28,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * so adding people did not lock out the ESP32 and the phones that were already syncing with the
  * shared key.
  */
-@SpringBootTest
+// A producer that none of these tests registers: otherwise, when this class runs first on the
+// shared H2 database, its first person would become the producer and stop being a caretaker
+@SpringBootTest(properties = "lacocha.producer-documents=4000000001")
 @AutoConfigureMockMvc
 class AuthTest {
 

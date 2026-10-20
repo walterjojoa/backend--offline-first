@@ -33,11 +33,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * End-to-end API tests against an in-memory H2 database.
  * The JSON stays in Spanish on purpose: it is the contract with the app and the ESP32.
  */
-@SpringBootTest
+@SpringBootTest(properties = "lacocha.producer-documents=" + ApiTest.PRODUCER_DOCUMENT)
 @AutoConfigureMockMvc
 class ApiTest {
 
     private static final String API_KEY = "clave-prueba";
+    /**
+     * Declared in the configuration, not "whoever registers first": the H2 database is shared by
+     * every test class, and on Linux the order they run in changes, so the first one is not always us.
+     */
+    static final String PRODUCER_DOCUMENT = "3000000001";
 
     @Autowired
     MockMvc mvc;
@@ -75,13 +80,16 @@ class ApiTest {
      * compartida: esa vive a la vista en los Ajustes de cada celular.
      */
     String producerToken() throws Exception {
-        String document = String.valueOf(1_000_000_000L + (System.nanoTime() % 900_000_000L));
         MvcResult res = mvc.perform(post("/api/auth/registro").header("X-API-Key", API_KEY)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(mapper.writeValueAsString(obj("documento", document, "nombre", "Productora", "clave", "laguna2026"))))
+                .content(mapper.writeValueAsString(
+                        obj("documento", PRODUCER_DOCUMENT, "nombre", "Productora", "clave", "laguna2026"))))
                 .andReturn();
-        JsonNode session = mapper.readTree(res.getResponse().getContentAsString());
-        // Si no fue la primera cuenta del esquema, se la promueve con una que sí lo sea
+        // 200 la primera vez, 409 en las siguientes: en cualquier caso ya existe
+        assertThat(res.getResponse().getStatus()).isIn(200, 409);
+        JsonNode session = call(post("/api/auth/sesion").contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(obj("documento", PRODUCER_DOCUMENT, "clave", "laguna2026"))), 200);
+        assertThat(session.get("usuario").get("rol").asText()).isEqualTo("productor");
         return session.get("token").asText();
     }
 
