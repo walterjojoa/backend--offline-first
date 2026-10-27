@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
@@ -37,8 +38,17 @@ import com.lacocha.backend.model.Finding;
  * So: commit first, answer the phone, then analyse. If the analysis never happens because the
  * service is down, nothing is lost — the readings are stored and the expert system already did its
  * part. The next push analyses the same window again, including them.
+ *
+ * <h2>It can be switched off</h2>
+ *
+ * {@code lacocha.ia-analisis-automatico=false} leaves the AI service in place and stops it being
+ * asked on every sync. Two uses: a farm that would rather look at a pond when it decides to and
+ * not have the service woken by every upload, and the tests, where an analysis running on its own
+ * on another thread races with the one the test is asking for and makes the result depend on which
+ * got there first.
  */
 @Component
+@ConditionalOnProperty(name = "lacocha.ia-analisis-automatico", matchIfMissing = true)
 public class AiTrigger {
 
     private static final Logger log = LoggerFactory.getLogger(AiTrigger.class);
