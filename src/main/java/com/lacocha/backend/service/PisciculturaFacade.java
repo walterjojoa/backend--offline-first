@@ -1,5 +1,6 @@
 package com.lacocha.backend.service;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -22,6 +23,9 @@ import com.lacocha.backend.dto.Catalog.PondUpdate;
 import com.lacocha.backend.dto.Devices.DeviceResponse;
 import com.lacocha.backend.dto.Devices.DeviceUpdate;
 import com.lacocha.backend.dto.Devices.SyncLogResponse;
+import com.lacocha.backend.dto.Forecasts.TemperatureReading;
+import com.lacocha.backend.dto.Forecasts.WaterForecast;
+import com.lacocha.backend.dto.Forecasts.WaterForecastRequest;
 import com.lacocha.backend.dto.Parameters.ParametersResponse;
 import com.lacocha.backend.dto.Queries.BatchSummary;
 import com.lacocha.backend.dto.Queries.BiometryResponse;
@@ -34,6 +38,7 @@ import com.lacocha.backend.dto.Sync.AlertResponse;
 import com.lacocha.backend.dto.Sync.PullResponse;
 import com.lacocha.backend.dto.Sync.PushRequest;
 import com.lacocha.backend.dto.Sync.PushResponse;
+import com.lacocha.backend.model.ServerClock;
 
 /**
  * The one door into the system for the HTTP layer.
@@ -56,9 +61,11 @@ public class PisciculturaFacade {
     private final SyncService sync;
     private final DeviceService devices;
     private final RuleParameters parameters;
+    private final AiClient ai;
 
     public PisciculturaFacade(AuthService auth, UserService people, CatalogService catalog,
-            QueryService queries, SyncService sync, DeviceService devices, RuleParameters parameters) {
+            QueryService queries, SyncService sync, DeviceService devices, RuleParameters parameters,
+            AiClient ai) {
         this.auth = auth;
         this.people = people;
         this.catalog = catalog;
@@ -66,6 +73,7 @@ public class PisciculturaFacade {
         this.sync = sync;
         this.devices = devices;
         this.parameters = parameters;
+        this.ai = ai;
     }
 
     // ---------- Who is using the app ----------
@@ -150,6 +158,24 @@ public class PisciculturaFacade {
 
     public List<DailyReadings> dailyReadings(UUID pondId, int days) {
         return queries.dailyReadings(pondId, days);
+    }
+
+    /**
+     * Water temperature for the coming days. The AI learns how this pond follows the air from its own
+     * readings, so it gets the ones it can pair with air: Open-Meteo gives back the last 92 days.
+     */
+    public WaterForecast waterForecast(UUID pondId, int days) {
+        Instant since = ServerClock.now().minus(Duration.ofDays(92));
+        List<TemperatureReading> readings = queries.pondReadings(pondId, since, null, 5000).stream()
+                .filter(r -> r.tempC() != null)
+                .map(r -> new TemperatureReading(r.recordedAt(), r.tempC()))
+                .toList();
+        if (readings.isEmpty()) {
+            // The AI rejects an empty list; this is the same answer it gives for too few readings
+            return new WaterForecast(List.of(), null, null, 0,
+                    "Faltan lecturas: este estanque todavía no tiene lecturas de temperatura");
+        }
+        return ai.waterForecast(new WaterForecastRequest(readings, Math.max(1, Math.min(days, 7))));
     }
 
     public List<FryCountResponse> fryCounts(UUID batchId, int limit) {

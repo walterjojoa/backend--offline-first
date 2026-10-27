@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.lacocha.backend.dto.Forecasts.WaterForecast;
 import com.lacocha.backend.dto.Queries.BatchSummary;
 import com.lacocha.backend.dto.Queries.BiometryResponse;
 import com.lacocha.backend.dto.Queries.DailyReadings;
@@ -80,6 +81,13 @@ public class QueryController {
     public List<DailyReadings> dailyReadings(@PathVariable UUID id,
             @RequestParam(name = "dias", defaultValue = "7") int days) {
         return facade.dailyReadings(id, days);
+    }
+
+    @GetMapping("/estanques/{id}/pronostico-temperatura")
+    @Operation(summary = "Pronóstico de la temperatura del agua para los próximos días (IA, con el clima de El Encano)")
+    public WaterForecast waterForecast(@PathVariable UUID id,
+            @RequestParam(name = "dias", defaultValue = "2") int days) {
+        return facade.waterForecast(id, days);
     }
 
     @GetMapping("/lotes/{id}/conteos")
