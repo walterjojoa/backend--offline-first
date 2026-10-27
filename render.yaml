@@ -18,3 +18,8 @@ services:
       # primero, y si se adelanta otra persona la finca queda sin quien la administre
       - key: PRODUCER_DOCUMENTS
         sync: false
+      # Servicio de IA (repo MODELO-IA-offline-first). La clave se copia de ese servicio en Render
+      - key: IA_URL
+        sync: false
+      - key: IA_API_KEY
+        sync: false

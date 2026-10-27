@@ -2,6 +2,15 @@
 
 ## Sin publicar
 
+### Nuevo: pronóstico de la temperatura del agua (IA)
+- `GET /api/estanques/{id}/pronostico-temperatura?dias=2` (1 a 7 días): mínima, máxima y promedio
+  esperados por día. Lo calcula el servicio de IA (repo MODELO-IA-offline-first) con las lecturas de
+  temperatura del estanque de los últimos 92 días y el clima de El Encano.
+- El backend es el único que llama a la IA (diagrama del profesor): la clave de la IA no llega a los
+  celulares. Variables nuevas `IA_URL` e `IA_API_KEY`; sin ellas el endpoint responde 503 y lo demás
+  sigue igual. Espera hasta 90 s, lo que tarda en despertar el plan gratis de Render.
+- `WaterForecastTest`: 6 pruebas contra un servicio de IA falso en un puerto local.
+
 ### Seguridad
 - Con la clave temporal el token solo abre `/api/auth/**` (403 en lo demás si no trae la clave
   compartida), y la administración responde 403 hasta cambiarla. Antes eso solo lo exigía la app.
