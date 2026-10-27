@@ -1,8 +1,10 @@
 package com.lacocha.backend.controller;
 
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -48,14 +50,29 @@ public class EventStreamController {
     /**
      * Opens the stream. Without parameters it carries everything; with one it carries only that
      * pond or that batch, which is what the counting screen uses.
+     *
+     * <h2>Why this returns a ResponseEntity and not the emitter on its own</h2>
+     *
+     * To get the charset onto the response, and it had to be measured to find out that
+     * {@code produces} is not enough: Spring sets the content type of a streaming response from the
+     * emitter and not from the mapping, so the header went out with no charset at all and the
+     * servlet default of ISO-8859-1 applied. The bytes were valid UTF-8 the whole time.
+     *
+     * A browser would have survived it, because the SSE specification says
+     * {@code text/event-stream} is decoded as UTF-8 whatever the header claims. Nothing else in the
+     * way has that rule to lean on, and every finding this carries is a Spanish sentence full of
+     * accents — "El oxígeno viene bajando". Declaring one encoding while sending another is a trap
+     * for whoever reads this stream next.
      */
     @GetMapping(path = "/eventos/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @Operation(summary = "Recibir en vivo lo que llega al servidor (SSE)",
             description = "Hay que leerlo con fetch() y no con EventSource: la ruta pide el token "
                     + "en una cabecera y EventSource no sabe mandar cabeceras.")
-    public SseEmitter stream(
+    public ResponseEntity<SseEmitter> stream(
             @RequestParam(name = "estanque_id", required = false) UUID pondId,
             @RequestParam(name = "lote_id", required = false) UUID batchId) {
-        return facade.openStream(pondId, batchId);
+        return ResponseEntity.ok()
+                .contentType(new MediaType(MediaType.TEXT_EVENT_STREAM, StandardCharsets.UTF_8))
+                .body(facade.openStream(pondId, batchId));
     }
 }
