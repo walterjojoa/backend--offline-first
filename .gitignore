@@ -3,9 +3,3 @@ data/
 .idea/
 *.iml
 .vscode/
-
-# El servicio de IA
-servicio-ia/.venv/
-servicio-ia/__pycache__/
-servicio-ia/**/__pycache__/
-servicio-ia/.pytest_cache/

@@ -8,7 +8,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /** Settings under "lacocha.*" in application.properties (filled from environment variables on Render). */
 @ConfigurationProperties(prefix = "lacocha")
 public record LaCochaProperties(String databaseUrl, String apiKey, String allowedOrigins,
-        String producerDocuments, String iaUrl, String iaApiKey) {
+        String producerDocuments) {
 
     /**
      * Documentos que siempre se registran como productor (PRODUCER_DOCUMENTS, separados por coma).

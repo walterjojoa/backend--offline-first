@@ -4,13 +4,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-import java.util.Optional;
-
 import org.springframework.stereotype.Service;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import com.lacocha.backend.dto.Ai.BatchProjection;
-import com.lacocha.backend.dto.Ai.FindingResponse;
 import com.lacocha.backend.dto.Auth.LoginRequest;
 import com.lacocha.backend.dto.Auth.PasswordChange;
 import com.lacocha.backend.dto.Auth.TemporaryPassword;
@@ -61,12 +56,9 @@ public class PisciculturaFacade {
     private final SyncService sync;
     private final DeviceService devices;
     private final RuleParameters parameters;
-    private final AiAnalysis ai;
-    private final EventStream stream;
 
     public PisciculturaFacade(AuthService auth, UserService people, CatalogService catalog,
-            QueryService queries, SyncService sync, DeviceService devices, RuleParameters parameters,
-            AiAnalysis ai, EventStream stream) {
+            QueryService queries, SyncService sync, DeviceService devices, RuleParameters parameters) {
         this.auth = auth;
         this.people = people;
         this.catalog = catalog;
@@ -74,8 +66,6 @@ public class PisciculturaFacade {
         this.sync = sync;
         this.devices = devices;
         this.parameters = parameters;
-        this.ai = ai;
-        this.stream = stream;
     }
 
     // ---------- Who is using the app ----------
@@ -224,53 +214,5 @@ public class PisciculturaFacade {
 
     public ParametersResponse parameters() {
         return parameters.response();
-    }
-
-    // ---------- What the AI service found ----------
-
-    /**
-     * Whether there is an AI service at all. The screens use it to decide whether to show the
-     * findings section or leave it out, instead of showing an empty panel that looks broken.
-     */
-    public boolean aiAvailable() {
-        return ai.available();
-    }
-
-    public List<FindingResponse> pendingFindings() {
-        return ai.pending().stream().map(FindingResponse::from).toList();
-    }
-
-    public List<FindingResponse> pondFindings(UUID pondId) {
-        return ai.ofPond(pondId).stream().map(FindingResponse::from).toList();
-    }
-
-    public List<FindingResponse> batchFindings(UUID batchId) {
-        return ai.ofBatch(batchId).stream().map(FindingResponse::from).toList();
-    }
-
-    public FindingResponse attendFinding(UUID id, String who) {
-        return FindingResponse.from(ai.attend(id, who));
-    }
-
-    /**
-     * Where the batch is heading. Empty when there is no AI service to ask, which the screen shows
-     * as "not available" and not as a projection of zero.
-     */
-    public Optional<BatchProjection> batchProjection(UUID batchId) {
-        return ai.projectionOf(batchId);
-    }
-
-    // ---------- The event handler ----------
-
-    /**
-     * Opens the stream the screen listens on. Filtered by pond or batch when given, which is what
-     * keeps a phone standing at one channel from being woken by every reading on the farm.
-     */
-    public SseEmitter openStream(UUID pondId, UUID batchId) {
-        return stream.open(pondId, batchId);
-    }
-
-    public int listeningToStream() {
-        return stream.listening();
     }
 }

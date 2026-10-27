@@ -7,7 +7,6 @@ import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,11 +55,9 @@ public class SyncService {
     private final DeviceRepository devices;
     private final PushJsonAdapter adapter;
     private final EventIngestion events;
-    private final ApplicationEventPublisher publisher;
 
     public SyncService(EntityManager em, PondRepository ponds, BatchRepository batches,
-            AlertRepository alerts, DeviceRepository devices, PushJsonAdapter adapter,
-            EventIngestion events, ApplicationEventPublisher publisher) {
+            AlertRepository alerts, DeviceRepository devices, PushJsonAdapter adapter, EventIngestion events) {
         this.em = em;
         this.ponds = ponds;
         this.batches = batches;
@@ -68,7 +65,6 @@ public class SyncService {
         this.devices = devices;
         this.adapter = adapter;
         this.events = events;
-        this.publisher = publisher;
     }
 
     /** Result that is filled in during the push. */
@@ -102,15 +98,6 @@ public class SyncService {
         log.info("push from {}: {} accepted, {} duplicates, {} stale, {} rejected, {} alerts",
                 request.deviceId(), result.accepted.size(), result.duplicates.size(), result.stale.size(),
                 result.rejected.size(), result.alertsCreated);
-
-        // Says what got data, and nothing more. The analysis itself runs after this transaction
-        // commits and on another thread (see AiTrigger): the phone that finally found signal cannot
-        // be made to wait for a service that may be asleep, and findings must never be raised about
-        // readings that could still roll back.
-        if (!outcome.ponds().isEmpty() || !outcome.batches().isEmpty()) {
-            publisher.publishEvent(new Changed(request.deviceId(), outcome.ponds(),
-                    outcome.batches(), result.accepted.size()));
-        }
         return new PushResponse(result.accepted, result.duplicates, result.stale, result.rejected,
                 result.alertsCreated, serverTime);
     }

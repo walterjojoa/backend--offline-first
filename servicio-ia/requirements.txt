@@ -1,7 +1,0 @@
-# El servicio que hace el analisis. Las versiones quedan fijas a proposito: un modelo que
-# cambia de version puede cambiar de resultado, y la tesis compara numeros entre corridas.
-fastapi==0.115.5
-uvicorn[standard]==0.32.1
-pydantic==2.10.3
-numpy==2.1.3
-scikit-learn==1.5.2
