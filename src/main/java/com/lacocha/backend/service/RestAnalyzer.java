@@ -101,11 +101,6 @@ public class RestAnalyzer implements Analyzer {
                 .body(request).retrieve().body(Ai.ProjectionJson.class));
     }
 
-    @Override
-    public Optional<Ai.ForecastJson> forecast(Ai.ForecastRequest request) {
-        return ask("pronostico-temperatura", () -> client.post().uri("/pronostico-temperatura")
-                .body(request).retrieve().body(Ai.ForecastJson.class));
-    }
 
     /**
      * Runs the call and turns anything that goes wrong into an empty Optional.

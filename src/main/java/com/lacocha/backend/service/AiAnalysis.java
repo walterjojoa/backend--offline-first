@@ -83,9 +83,6 @@ public class AiAnalysis {
 
     static final int DAYS_AHEAD = 30;
 
-    /** Days of water temperature the forecast is asked for. The service caps it at seven. */
-    static final int FORECAST_DAYS = 3;
-
     /** Urgency, in order. Used to decide whether a finding that repeats is worth raising again. */
     private static final List<String> LEVELS = List.of("informe", "advertencia", "critica");
 
@@ -264,28 +261,6 @@ public class AiAnalysis {
     public Optional<Ai.ProjectionJson> projectionOf(UUID batchId) {
         Batch batch = batches.findById(batchId).orElseThrow(() -> CatalogService.notFound("El lote"));
         return analyzer.projection(batchRequest(batch));
-    }
-
-    /**
-     * Water temperature for the coming days of one pond.
-     *
-     * Pairs with the projection: the forecast says how warm the water will be, and the growth model
-     * says what that warmth is worth in grams. Not stored either, and for a stronger reason — a
-     * forecast kept from yesterday is simply wrong today.
-     */
-    @Transactional(readOnly = true)
-    public Optional<Ai.ForecastJson> forecastOf(UUID pondId) {
-        if (!ponds.existsById(pondId)) {
-            throw CatalogService.notFound("El estanque");
-        }
-        List<Ai.ReadingJson> readings = readingsOf(pondId).stream()
-                .filter(r -> r.getTempC() != null)
-                .map(AiAnalysis::readingJson)
-                .toList();
-        if (readings.isEmpty()) {
-            return Optional.empty();
-        }
-        return analyzer.forecast(new Ai.ForecastRequest(readings, FORECAST_DAYS));
     }
 
     // ---------- storing, without repeating ----------

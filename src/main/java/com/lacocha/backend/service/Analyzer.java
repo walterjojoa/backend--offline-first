@@ -28,6 +28,18 @@ import com.lacocha.backend.dto.Ai;
  * fine". The service was built to never say that when it does not know — its own routes answer an
  * empty list or null rather than an error for exactly that reason — and the type that carries its
  * answer here has to preserve the distinction.
+ *
+ * <h2>The forecast is not here, on purpose</h2>
+ *
+ * The service's fifth route, {@code /pronostico-temperatura}, has its own client in
+ * {@link AiClient}, and it belongs there rather than here. A screen asks for a forecast and waits
+ * for it, so the right answer to a failure is a 503 it can show — which is what AiClient throws.
+ * Everything behind this port runs on a background thread after a sync committed, where throwing
+ * reaches nobody, so a failure has to come back as an absent value instead.
+ *
+ * The two also need different windows. The forecast fits its model against the air history, and
+ * Open-Meteo gives 92 days of that, so it sends 92 days of readings; the detectors here work off a
+ * month, because beyond that a pond's "normal" starts dragging in the change of season.
  */
 public interface Analyzer {
 
@@ -54,9 +66,6 @@ public interface Analyzer {
 
     /** Projected weight, harvest date and survival of a batch. */
     Optional<Ai.ProjectionJson> projection(Ai.BatchRequest request);
-
-    /** Water temperature for the coming days, from the pond's readings and the air at El Encano. */
-    Optional<Ai.ForecastJson> forecast(Ai.ForecastRequest request);
 
     /**
      * The analyzer for a deployment without an AI service: it answers "could not ask" to everything,
@@ -94,10 +103,6 @@ public interface Analyzer {
                 return Optional.empty();
             }
 
-            @Override
-            public Optional<Ai.ForecastJson> forecast(Ai.ForecastRequest request) {
-                return Optional.empty();
-            }
         };
     }
 }

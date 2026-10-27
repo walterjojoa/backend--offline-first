@@ -56,10 +56,6 @@ public final class AnalyzerDecorators {
             return inner.projection(request);
         }
 
-        @Override
-        public Optional<Ai.ForecastJson> forecast(Ai.ForecastRequest request) {
-            return inner.forecast(request);
-        }
     }
 
     /**
@@ -142,10 +138,6 @@ public final class AnalyzerDecorators {
             return closed() ? Optional.empty() : note(inner.projection(request));
         }
 
-        @Override
-        public Optional<Ai.ForecastJson> forecast(Ai.ForecastRequest request) {
-            return closed() ? Optional.empty() : note(inner.forecast(request));
-        }
 
         private boolean note(boolean worked) {
             record(worked);
