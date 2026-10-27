@@ -85,6 +85,7 @@ import numpy as np
 from sklearn.ensemble import IsolationForest
 
 from ia import estadistica as est
+from ia.hallazgo import Hallazgo
 
 # Las tres variables del agua, en el orden en que el sistema experto las evalúa (Rules.VARIABLES).
 VARIABLES = ("temp_c", "ph", "oxigeno_mg_l")
@@ -174,16 +175,6 @@ class Rango:
         if self.optimo_max is None:
             return f"mínimo {_numero(self.optimo_min)}"
         return f"{_numero(self.optimo_min)}–{_numero(self.optimo_max)}"
-
-
-@dataclass(frozen=True)
-class Hallazgo:
-    clase: str
-    nivel: str
-    mensaje: str
-    puntaje: float
-    variable: str | None = None
-    medido_en: datetime | None = None
 
 
 @dataclass(frozen=True)
