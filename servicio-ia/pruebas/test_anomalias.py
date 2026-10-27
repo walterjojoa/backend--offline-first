@@ -356,3 +356,28 @@ def test_el_historial_se_recorta_al_tope():
     muchas = completas(_estanque_con_ciclo(n=1) * (an.TOPE_LECTURAS + 50), cada_horas=1.0)
     analisis = an.analizar(muchas, RANGOS)
     assert analisis.lecturas_usadas == an.TOPE_LECTURAS
+
+
+def test_el_historial_se_ordena_aunque_llegue_revuelto():
+    """
+    Las lecturas llegan de varios celulares que sincronizan cuando agarran señal, así que el orden
+    en que entran a la base no es el orden en que se midieron. Todo este módulo razona sobre el
+    tiempo, de modo que si no ordenara, "la lectura actual" podría ser una de la semana pasada.
+    """
+    historia = _estanque_de_manantial()
+    en_orden = lecturas(historia + [15.0])
+    revuelto = [en_orden[-1]] + en_orden[:-1]  # la mas nueva, de primera
+
+    assert an.analizar(revuelto, RANGOS).hallazgos == an.analizar(en_orden, RANGOS).hallazgos
+    assert de_clase(an.analizar(revuelto, RANGOS), "desviacion")
+
+
+def test_las_lecturas_sin_zona_horaria_no_rompen_el_analisis():
+    """Por la misma razón que en crecimiento: el tiempo es la base de todo este módulo."""
+    historia = _estanque_de_manantial()
+    sin_zona = [an.Lectura(medido_en=datetime(2026, 10, 1, 6) + timedelta(hours=6 * i), temp_c=v)
+                for i, v in enumerate(historia + [15.0])]
+    analisis = an.analizar(sin_zona, RANGOS)
+    assert de_clase(analisis, "desviacion")
+    # 21 lecturas cada 6 horas son 20 intervalos: 5 dias justos
+    assert analisis.dias_cubiertos == pytest.approx(5.0, abs=0.01)

@@ -372,3 +372,42 @@ def test_sin_mortalidades_no_se_inventa_una_aceleracion():
     )
     assert proyeccion.supervivencia_pct == 100.0
     assert de_clase(proyeccion, "mortalidad") == []
+
+
+# ---------- la zona horaria, que tumbó el servicio una vez ----------
+
+def test_un_lote_con_muertes_pero_sin_temperatura_no_tumba_el_servicio():
+    """
+    El bug exacto, convertido en prueba.
+
+    El cuidador anota las muertes antes de bajar el sensor al agua, así que un lote con
+    mortalidades y sin ninguna lectura de temperatura es lo más normal del mundo. La hora "ahora"
+    se sacaba de la primera temperatura, de modo que sin temperaturas quedaba sin zona horaria, y
+    compararla con las mortalidades (que sí la traen) daba un error 500.
+    """
+    proyeccion = cre.proyectar(
+        cre.Lote(sembrado_en=SIEMBRA, cantidad_inicial=1000, peso_inicial_g=5.0),
+        mortalidades=[cre.Mortalidad(medido_en=INICIO + timedelta(days=5), cantidad=300)],
+        temperaturas=[],
+        # Sin 'hoy': es el caso de producción, donde la hora la pone el propio servicio
+    )
+    # Lo que sí se puede calcular, se calcula
+    assert proyeccion.supervivencia_pct == 70.0
+    assert proyeccion.cantidad_actual == 700
+    # Y lo que no, queda dicho en vez de salir como cero
+    assert proyeccion.peso_proyectado_g is None
+    assert any("temperatura" in n for n in proyeccion.notas)
+
+
+def test_las_fechas_sin_zona_se_toman_como_utc():
+    """Pueden llegar de una prueba o de un cliente descuidado; no deben romper la comparación."""
+    sin_zona = datetime(2026, 6, 1, 6, 0)  # sin tzinfo
+    proyeccion = cre.proyectar(
+        cre.Lote(sembrado_en=SIEMBRA, cantidad_inicial=1000),
+        biometrias=[cre.Biometria(medido_en=sin_zona, peso_promedio_g=20.0)],
+        temperaturas=[cre.Temperatura(medido_en=sin_zona, temp_c=13.0)],
+        mortalidades=[cre.Mortalidad(medido_en=sin_zona + timedelta(days=5), cantidad=50)],
+        hoy=INICIO + timedelta(days=30),
+    )
+    assert proyeccion.peso_actual_g == 20.0
+    assert proyeccion.supervivencia_pct == 95.0
