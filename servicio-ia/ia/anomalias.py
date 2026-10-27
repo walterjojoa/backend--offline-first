@@ -78,7 +78,7 @@ cuántas lecturas había y cuáles corrieron. Un servicio que opina con cuatro l
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 
 import numpy as np
@@ -86,6 +86,7 @@ from sklearn.ensemble import IsolationForest
 
 from ia import estadistica as est
 from ia.hallazgo import Hallazgo
+from ia.tiempo import con_zona
 
 # Las tres variables del agua, en el orden en que el sistema experto las evalúa (Rules.VARIABLES).
 VARIABLES = ("temp_c", "ph", "oxigeno_mg_l")
@@ -241,15 +242,20 @@ def analizar(historial: list[Lectura], rangos: list[Rango] | None = None) -> Ana
     """
     Juzga la última lectura del historial contra las anteriores, y la tendencia de toda la ventana.
 
-    El historial llega ordenado de la más vieja a la más nueva. Quien llama decide la ventana; la
-    recomendación es un mes, que es suficiente para fijar la costumbre del estanque sin arrastrar
-    el cambio de estación.
+    Quien llama decide la ventana; la recomendación es un mes, que es suficiente para fijar la
+    costumbre del estanque sin arrastrar el cambio de estación.
+
+    El historial se ordena aquí y no se exige ordenado. Las lecturas llegan de varios celulares que
+    sincronizan cuando agarran señal, así que el orden en que entraron a la base no es el orden en
+    que se midieron, y todo este módulo razona sobre el tiempo: cuál es "la actual", cuántos días
+    cubre la ventana, hacia dónde va la pendiente.
     """
     rangos_por_variable = {r.variable: r for r in (rangos or [])}
     if len(historial) < 2:
         return Analisis(len(historial), 0.0, [], [])
 
-    historial = historial[-TOPE_LECTURAS:]
+    historial = sorted((replace(l, medido_en=con_zona(l.medido_en)) for l in historial),
+                       key=lambda l: l.medido_en)[-TOPE_LECTURAS:]
     actual = historial[-1]
     anteriores = historial[:-1]
     dias_cubiertos = (historial[-1].medido_en - historial[0].medido_en).total_seconds() / SEGUNDOS_POR_DIA

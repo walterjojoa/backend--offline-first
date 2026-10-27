@@ -39,13 +39,15 @@ lote sin biometrías ni temperatura sería un número inventado con cara de pron
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date, datetime, timedelta
 
 import numpy as np
 
 from ia import estadistica as est
 from ia.hallazgo import Hallazgo
+from ia.tiempo import ahora as ahora_utc
+from ia.tiempo import con_zona
 
 SEGUNDOS_POR_DIA = 86400.0
 
@@ -217,10 +219,15 @@ def proyectar(lote: Lote,
     Las listas llegan ordenadas de lo más viejo a lo más nuevo. 'hoy' se puede fijar para que las
     pruebas no dependan del día en que corran.
     """
-    biometrias = sorted(biometrias or [], key=lambda b: b.medido_en)
-    mortalidades = sorted(mortalidades or [], key=lambda m: m.medido_en)
-    temperaturas = sorted(temperaturas or [], key=lambda t: t.medido_en)
-    ahora = hoy or datetime.now(tz=(temperaturas[0].medido_en.tzinfo if temperaturas else None))
+    # Se le pone zona a todo antes de comparar nada. Sin esto, un lote con mortalidades pero sin
+    # lecturas de agua tumbaba el servicio (ver ia/tiempo.py).
+    biometrias = sorted((replace(b, medido_en=con_zona(b.medido_en)) for b in (biometrias or [])),
+                        key=lambda b: b.medido_en)
+    mortalidades = sorted((replace(m, medido_en=con_zona(m.medido_en)) for m in (mortalidades or [])),
+                          key=lambda m: m.medido_en)
+    temperaturas = sorted((replace(t, medido_en=con_zona(t.medido_en)) for t in (temperaturas or [])),
+                          key=lambda t: t.medido_en)
+    ahora = con_zona(hoy) if hoy is not None else ahora_utc()
 
     hallazgos: list[Hallazgo] = []
     notas: list[str] = []
