@@ -175,7 +175,7 @@ public class EventStream implements FindingPublisher {
      * disappeared from holding a slot until its half hour is up.
      */
     @Scheduled(fixedRateString = "#{T(java.time.Duration).ofSeconds(20).toMillis()}")
-    void heartbeat() {
+    public void heartbeat() {
         for (Listener listener : listeners) {
             try {
                 listener.emitter().send(SseEmitter.event().comment("ping"));
@@ -206,7 +206,7 @@ public class EventStream implements FindingPublisher {
 
     /** Lets go of every connection on shutdown, so no browser is left waiting on a dead server. */
     @jakarta.annotation.PreDestroy
-    void closeAll() {
+    public void closeAll() {
         List.copyOf(listeners).forEach(this::close);
     }
 
