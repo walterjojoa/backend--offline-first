@@ -3,6 +3,7 @@ package com.lacocha.backend.service;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -32,8 +33,15 @@ public class EventIngestion {
 
     private static final Logger log = LoggerFactory.getLogger(EventIngestion.class);
 
-    /** What the events of one push produced. */
-    public record Outcome(List<UUID> accepted, List<UUID> duplicates, List<Rejection> rejected, int alertsCreated) {
+    /**
+     * What the events of one push produced.
+     *
+     * ponds and batches are the ones that actually received something, and they are what the AI
+     * analysis is told to look at once the push commits. Sets and not lists: a push of 500 counts
+     * from one batch is still one batch to project.
+     */
+    public record Outcome(List<UUID> accepted, List<UUID> duplicates, List<Rejection> rejected,
+            int alertsCreated, Set<UUID> ponds, Set<UUID> batches) {
     }
 
     private final EventStore store;
@@ -51,6 +59,8 @@ public class EventIngestion {
         List<UUID> duplicates = new ArrayList<>();
         List<Rejection> rejected = new ArrayList<>();
         int alertsCreated = 0;
+        Set<UUID> ponds = new LinkedHashSet<>();
+        Set<UUID> batches = new LinkedHashSet<>();
 
         // The decorators live for this push only: a tally that counted two pushes would say nothing
         SourceTally tally = new SourceTally(Trace.enabled() ? new Trace(store) : store);
@@ -81,13 +91,14 @@ public class EventIngestion {
             }
             tally.save(entity);
             accepted.add(event.id());
+            (event.parentIsPond() ? ponds : batches).add(event.parentId());
             alertsCreated += ingestors.forEvent(event).afterStore(event, tally);
         }
 
         if (!accepted.isEmpty()) {
             log.info("events from {}: {}", deviceId, tally.summary());
         }
-        return new Outcome(accepted, duplicates, rejected, alertsCreated);
+        return new Outcome(accepted, duplicates, rejected, alertsCreated, ponds, batches);
     }
 
     /** The id comes from the phone (that is what makes the push idempotent); the rest is the server's. */
