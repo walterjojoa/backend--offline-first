@@ -144,16 +144,6 @@ class AiTest {
                     batchFindings, notes));
         }
 
-        @Override
-        public Optional<Ai.ForecastJson> forecast(Ai.ForecastRequest request) {
-            calls++;
-            if (!up) {
-                return Optional.empty();
-            }
-            return Optional.of(new Ai.ForecastJson(
-                    List.of(new Ai.ForecastDayJson("2026-10-28", 11.5, 13.2, 12.3)),
-                    0.2, 36.0, 30, "La mínima y la máxima ya incluyen el margen de error"));
-        }
     }
 
     @Autowired
@@ -499,42 +489,6 @@ class AiTest {
         assertThat(ofBatch.get(0).get("estanque_id").isNull()).isTrue();
         assertThat(ofBatch.get(0).get("nivel").asText()).isEqualTo("critica");
         assertThat(call(get("/api/estanques/" + ids[0] + "/hallazgos"), 200)).isEmpty();
-    }
-
-    // ---------- the forecast, which is the service's own ----------
-
-    @Test
-    void elPronosticoDelAguaLlegaPorDias() throws Exception {
-        String pond = pondWithReadings(20)[0];
-        JsonNode forecast = call(get("/api/estanques/" + pond + "/pronostico"), 200);
-
-        assertThat(forecast.get("dias")).hasSize(1);
-        assertThat(forecast.get("dias").get(0).get("minima").asDouble()).isEqualTo(11.5);
-        assertThat(forecast.get("error_tipico").asDouble()).isEqualTo(0.2);
-        // Cuánto tarda el estanque en seguir al aire: uno de manantial reacciona en días
-        assertThat(forecast.get("reaccion_horas").asDouble()).isEqualTo(36.0);
-    }
-
-    @Test
-    void sinServicioElPronosticoDiceQueNoEstaDisponible() throws Exception {
-        String pond = pondWithReadings(20)[0];
-        fake.up = false;
-        call(get("/api/estanques/" + pond + "/pronostico"), 503);
-    }
-
-    @Test
-    void unEstanqueSinLecturasDeTemperaturaNoPideElPronostico() throws Exception {
-        String pond = newId();
-        push(obj("estanques", List.of(obj("id", pond, "nombre", "Vacio " + pond.substring(0, 8),
-                "tipo", "tanque", "actualizado_en", minutesAgo(600)))));
-        fake.calls = 0;
-        call(get("/api/estanques/" + pond + "/pronostico"), 503);
-        assertThat(fake.calls).as("sin temperatura no hay con que ajustar el modelo").isZero();
-    }
-
-    @Test
-    void elPronosticoDeUnEstanqueQueNoExisteEs404() throws Exception {
-        call(get("/api/estanques/" + newId() + "/pronostico"), 404);
     }
 
     // ---------- the routes ----------

@@ -58,11 +58,6 @@ class AnalyzerDecoratorsTest {
             return Optional.empty();
         }
 
-        @Override
-        public Optional<Ai.ForecastJson> forecast(Ai.ForecastRequest request) {
-            calls++;
-            return Optional.empty();
-        }
     }
 
     private static Ai.ReadingsRequest anyReadings() {
@@ -80,7 +75,6 @@ class AnalyzerDecoratorsTest {
         assertThat(absent.combination(anyReadings())).isEmpty();
         assertThat(absent.projection(new Ai.BatchRequest(null, null, null, List.of(), List.of(),
                 List.of(), 30, null))).isEmpty();
-        assertThat(absent.forecast(new Ai.ForecastRequest(List.of(), 3))).isEmpty();
     }
 
     // ---------- "could not ask" is not "nothing found" ----------

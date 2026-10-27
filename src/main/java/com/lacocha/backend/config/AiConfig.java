@@ -15,7 +15,12 @@ import com.lacocha.backend.service.AnalyzerDecorators;
 import com.lacocha.backend.service.RestAnalyzer;
 
 /**
- * Wires the AI service, and decides what happens when it is not there.
+ * Wires the background analysis, and decides what happens when the service is not there.
+ *
+ * The forecast has its own client ({@link com.lacocha.backend.service.AiClient}) and does not come
+ * through here: a screen waiting for a forecast needs a 503 it can show, and everything behind the
+ * Analyzer port runs on a background thread where throwing reaches nobody. Both read the same
+ * {@link AiProperties}, so there is one place that says where the service is.
  *
  * Without IA_URL the whole thing falls back to {@link Analyzer#absent()} and the farm runs exactly
  * as it did before: the expert system keeps generating its threshold alerts and nothing waits on
@@ -38,14 +43,16 @@ public class AiConfig {
      * call rather than making it and swallowing the result, which is the whole point of having it.
      */
     @Bean
-    public Analyzer analyzer(LaCochaProperties props) {
-        if (props.iaUrl() == null || props.iaUrl().isBlank()) {
+    public Analyzer analyzer(AiProperties props) {
+        // La misma AiProperties que usa AiClient para el pronostico: una sola fuente para la
+        // direccion y la clave, aunque los dos lados de la IA fallen de formas distintas
+        if (!props.configured()) {
             log.info("Sin IA_URL: el backend trabaja solo con el sistema experto de umbrales");
             return Analyzer.absent();
         }
-        log.info("Servicio de IA en {}", props.iaUrl());
+        log.info("Servicio de IA en {}", props.url());
         Analyzer analyzer = new AnalyzerDecorators.Resilient(
-                new RestAnalyzer(props.iaUrl().trim(), props.iaApiKey()));
+                new RestAnalyzer(props.url().replaceAll("/+$", ""), props.apiKey()));
         return AnalyzerDecorators.Trace.enabled() ? new AnalyzerDecorators.Trace(analyzer) : analyzer;
     }
 
