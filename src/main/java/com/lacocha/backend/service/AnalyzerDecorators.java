@@ -76,11 +76,26 @@ public final class AnalyzerDecorators {
         /** Until when the door stays closed. EPOCH means open. Shared between threads. */
         private final AtomicReference<Instant> closedUntil = new AtomicReference<>(Instant.EPOCH);
 
+        private final Duration pause;
+
         public Resilient(Analyzer inner) {
-            super(inner);
+            this(inner, PAUSE);
         }
 
-        /** Visible for the tests, which cannot wait two real minutes. */
+        /**
+         * With the pause spelled out, which is how the tests check that the door opens again.
+         *
+         * Waiting two real minutes in a test is not an option, and neither is trusting that it
+         * reopens because the code looks like it should: the whole value of this decorator is in
+         * the reopening. A circuit breaker that closes and never opens is a service switched off
+         * by its first bad minute.
+         */
+        Resilient(Analyzer inner, Duration pause) {
+            super(inner);
+            this.pause = pause;
+        }
+
+        /** Whether the door is closed right now. Visible for the tests. */
         boolean closed() {
             return ServerClock.now().isBefore(closedUntil.get());
         }
@@ -118,12 +133,12 @@ public final class AnalyzerDecorators {
                 closedUntil.set(Instant.EPOCH);
                 return;
             }
-            Instant until = ServerClock.now().plus(PAUSE);
+            Instant until = ServerClock.now().plus(pause);
             // Only the thread that actually closes the door writes the log line, so a round of
             // syncs failing at once leaves one line and not eight
             if (closedUntil.getAndSet(until).equals(Instant.EPOCH)) {
-                log.info("el servicio de IA no respondió: no se le vuelve a preguntar por {} minutos",
-                        PAUSE.toMinutes());
+                log.info("el servicio de IA no respondió: no se le vuelve a preguntar por {} segundos",
+                        pause.toSeconds());
             }
         }
     }
