@@ -48,19 +48,44 @@ Para probar las migraciones en PostgreSQL de verdad (además de H2): `docker com
 ### Patrones de diseño
 
 `SyncService.push()` hacía cinco trabajos en 143 líneas: registrar el dispositivo, fusionar estanques,
-fusionar lotes, guardar los eventos y escribir la bitácora. Los cinco patrones están puestos en esas
-costuras, no de adorno. Hoy ese método tiene 24 líneas.
+fusionar lotes, guardar los eventos y escribir la bitácora. Los cinco patrones iniciales están puestos
+en esas costuras, no de adorno. Hoy ese método tiene 24 líneas.
+
+Al conectar el servicio de IA aparecieron dos costuras más del mismo tipo, así que **Bridge y
+Decorator aparecen dos veces cada uno**, en problemas distintos y con el mismo criterio. Y entró un
+sexto patrón, **Proxy**, por una razón que solo existe en este despliegue.
 
 | Patrón | Dónde | Qué problema resuelve |
 |---|---|---|
 | **Facade** | `service/PisciculturaFacade.java` | Los cinco controladores inyectaban cinco servicios distintos. Ahora inyectan uno. Un controlador solo tiene que saber su ruta, su JSON y qué caso de uso llamar; en qué servicio vive ese caso de uso, y si mañana se mueve, no es asunto suyo. |
 | **Adapter** | `service/PushJsonAdapter.java` | El celular y el ESP32 suben JSON sin tipo: una trama del contador llega como un objeto cuyo campo `tipo` es la única pista de qué es. Este es el único lugar que la convierte en un record ya validado, y que nombra el campo que falló como lo nombra el JSON y no como lo nombra Java. Es el gemelo en el servidor del `ArduinoSerialAdapter` de la app. |
 | **Factory Method** | `service/EventIngestors.java` | Antes había un `instanceof WaterReadingInput` enterrado en el push para decidir quién dispara alertas. Ahora cada subclase de `Factory` responde por un `tipo` del protocolo y decide quién lo atiende. Aceptar un evento nuevo es agregar una subclase y registrarla. Es además la **única** lista de las etiquetas del protocolo: `Events.TYPES` desapareció. |
-| **Bridge** | `service/EventStore.java` + `JpaEventStore.java` | `EventIngestion` tiene las reglas de qué se acepta, qué es duplicado y qué se rechaza, y sostiene un `EventStore` sin saber nunca cuál es. Nunca ve un `EntityManager`. Eso es lo que permite probar esas reglas sin base de datos (ver *Pruebas automáticas*). |
-| **Decorator** | `service/EventStoreDecorators.java` | Dos capacidades transversales que se envuelven desde fuera y se apilan. `SourceTally` cuenta lo guardado por `origen` y lo deja en el log (`events from cel-cuidador-1: contador=120, manual=3`): la tesis compara el contador contra el conteo a mano, y eso lo responde sin una consulta. `Trace` escribe una línea por evento y **solo se envuelve si su nivel está en DEBUG**, porque un push trae hasta 500. |
+| **Bridge** | `service/EventStore.java` + `JpaEventStore.java`, y `service/Analyzer.java` + `AiAnalysis.java` | `EventIngestion` tiene las reglas de qué se acepta, qué es duplicado y qué se rechaza, y sostiene un `EventStore` sin saber nunca cuál es. Nunca ve un `EntityManager`. Eso es lo que permite probar esas reglas sin base de datos (ver *Pruebas automáticas*). |
+| **Proxy** | `service/CachingAnalyzer.java` | El servicio de IA duerme en el plan gratuito de Render y tarda cerca de un minuto en despertar, así que cada llamada evitada es un minuto que el cuidador no espera. Dos preguntas se hacen mucho más seguido de lo que cambian sus respuestas: `available()` corre antes de **cada** sincronización y en cada pantalla que muestra hallazgos, y la proyección se recalcula cada vez que alguien abre un lote. El Proxy responde por el servicio cuando ya sabe la respuesta. **No** guarda el análisis del agua: esas tres rutas se llaman justo después de que entraron lecturas nuevas, o sea justo después de que la respuesta cambió. |
+| **Decorator** | `service/EventStoreDecorators.java` + `service/AnalyzerDecorators.java` | Dos capacidades transversales que se envuelven desde fuera y se apilan. `SourceTally` cuenta lo guardado por `origen` y lo deja en el log (`events from cel-cuidador-1: contador=120, manual=3`): la tesis compara el contador contra el conteo a mano, y eso lo responde sin una consulta. `Trace` escribe una línea por evento y **solo se envuelve si su nivel está en DEBUG**, porque un push trae hasta 500. |
 
 Los decoradores se construyen por cada push, no una vez: un conteo por `origen` que sumara dos pushes
 distintos no diría nada.
+
+#### Proxy y Decorator, que se parecen y no son lo mismo
+
+Los dos implementan `Analyzer` y los dos envuelven a otro, así que desde afuera se ven iguales. El
+proyecto tiene un ejemplo de cada uno sobre la misma interfaz, y la diferencia vale decirla porque es
+justo lo que se pregunta en una sustentación.
+
+`AnalyzerDecorators` **agrega comportamiento alrededor** de una llamada que de todas formas ocurre:
+`Trace` la registra, `Resilient` la deja pasar o la rechaza según cómo fue la anterior.
+`CachingAnalyzer` **se pone en el lugar** del servicio: cuando acierta no se llama a nadie, y quien
+pregunta no tiene forma de saber si habló con el servicio real. Uno decora la llamada, el otro la
+reemplaza.
+
+El orden de las capas es parte del diseño. De adentro hacia afuera: la llamada HTTP, el
+cortacircuitos, la caché y la traza. La caché va **por fuera** del cortacircuitos a propósito —
+cuando el servicio está caído es justo cuando más vale responder con lo que ya se sabe, y al revés
+quedaría inalcanzable en la única situación para la que se construyó.
+
+Lo que el Proxy **no** hace también es una decisión: no guarda un "no pude preguntar". Hacerlo
+convertiría un minuto malo en dos, y de reintentar ya se encarga el cortacircuitos, que sabe cuándo.
 
 ### Idioma del código
 
