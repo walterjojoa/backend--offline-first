@@ -12,6 +12,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import com.lacocha.backend.service.Analyzer;
 import com.lacocha.backend.service.AnalyzerDecorators;
+import com.lacocha.backend.service.CachingAnalyzer;
 import com.lacocha.backend.service.RestAnalyzer;
 
 /**
@@ -36,11 +37,21 @@ public class AiConfig {
     private static final Logger log = LoggerFactory.getLogger(AiConfig.class);
 
     /**
-     * The analyzer, wrapped from the inside out: the HTTP call, then the circuit breaker, then the
-     * trace if anyone is reading it.
+     * The analyzer, wrapped from the inside out: the HTTP call, the circuit breaker, the cache, and
+     * the trace if anyone is reading it.
      *
-     * The order matters. Resilient has to sit outside RestAnalyzer so that a closed door skips the
-     * call rather than making it and swallowing the result, which is the whole point of having it.
+     * The order is the design, not an accident:
+     *
+     * <ol>
+     *   <li><b>RestAnalyzer</b> is the only one that really reaches the service.</li>
+     *   <li><b>Resilient</b> goes outside it so that a closed door skips the call rather than
+     *       making it and swallowing the result, which is the whole point of having it.</li>
+     *   <li><b>CachingAnalyzer</b> goes outside the breaker, and that way round matters: when the
+     *       service is down is exactly when answering from what is already known is worth most. A
+     *       cache inside the breaker would be unreachable in the only situation it was built for.</li>
+     *   <li><b>Trace</b> goes outermost so the log shows what the caller asked for, including the
+     *       calls the cache answered without anybody leaving the building.</li>
+     * </ol>
      */
     @Bean
     public Analyzer analyzer(AiProperties props) {
@@ -51,8 +62,8 @@ public class AiConfig {
             return Analyzer.absent();
         }
         log.info("Servicio de IA en {}", props.url());
-        Analyzer analyzer = new AnalyzerDecorators.Resilient(
-                new RestAnalyzer(props.url().replaceAll("/+$", ""), props.apiKey()));
+        Analyzer analyzer = new CachingAnalyzer(new AnalyzerDecorators.Resilient(
+                new RestAnalyzer(props.url().replaceAll("/+$", ""), props.apiKey())));
         return AnalyzerDecorators.Trace.enabled() ? new AnalyzerDecorators.Trace(analyzer) : analyzer;
     }
 
