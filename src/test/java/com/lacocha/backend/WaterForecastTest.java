@@ -62,9 +62,15 @@ class WaterForecastTest {
         try {
             HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
             server.createContext("/", exchange -> {
-                receivedPath = exchange.getRequestURI().getPath();
-                receivedKey = exchange.getRequestHeaders().getFirst("X-API-Key");
-                receivedBody = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+                String path = exchange.getRequestURI().getPath();
+                String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+                // Each push also starts the background analysis, which calls this same fake service a
+                // moment later; only the calls to the route under test count
+                if (path.equals("/pronostico-temperatura")) {
+                    receivedPath = path;
+                    receivedKey = exchange.getRequestHeaders().getFirst("X-API-Key");
+                    receivedBody = body;
+                }
                 byte[] answer = (status == 200 ? AI_ANSWER : "{\"detail\":\"falla\"}").getBytes(StandardCharsets.UTF_8);
                 exchange.getResponseHeaders().add("Content-Type", "application/json");
                 exchange.sendResponseHeaders(status, answer.length);

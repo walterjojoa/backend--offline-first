@@ -2,7 +2,11 @@ package com.lacocha.backend.service;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import java.util.Optional;
@@ -12,6 +16,9 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.lacocha.backend.dto.Ai.FindingResponse;
 import com.lacocha.backend.dto.Ai.ProjectionJson;
+import com.lacocha.backend.dto.Assistant.Answer;
+import com.lacocha.backend.dto.Assistant.AssistantRequest;
+import com.lacocha.backend.dto.Assistant.Question;
 import com.lacocha.backend.dto.Auth.LoginRequest;
 import com.lacocha.backend.dto.Auth.PasswordChange;
 import com.lacocha.backend.dto.Auth.TemporaryPassword;
@@ -291,6 +298,45 @@ public class PisciculturaFacade {
      */
     public Optional<ProjectionJson> batchProjection(UUID batchId) {
         return analysis.projectionOf(batchId);
+    }
+
+    // ---------- The farm assistant (AI level 3) ----------
+
+    /**
+     * A question for the assistant, answered with the farm as it is right now.
+     *
+     * The backend is the one that knows the farm, so it gathers what the language model needs: every
+     * active pond with its latest readings, each active batch with its summary (where the expert system
+     * already worked out the daily feed ration), the pending alerts and the reference ranges. The model
+     * explains and recommends from these numbers; it does not make up its own.
+     */
+    public Answer askAssistant(Question question) {
+        return ai.ask(new AssistantRequest(question.question().strip(), farmState(),
+                question.history() == null ? List.of() : question.history()));
+    }
+
+    Map<String, Object> farmState() {
+        Map<String, Object> farm = new LinkedHashMap<>();
+        farm.put("ahora_colombia", LocalDateTime.now(Dates.FARM_ZONE).withNano(0).toString());
+        Instant since = ServerClock.now().minus(Duration.ofDays(14));
+        List<Map<String, Object>> ponds = new ArrayList<>();
+        for (PondResponse pond : catalog.listPonds()) {
+            if (!pond.active()) {
+                continue;
+            }
+            Map<String, Object> entry = new LinkedHashMap<>();
+            entry.put("nombre", pond.name());
+            entry.put("tipo", pond.type());
+            entry.put("volumen_m3", pond.volumeM3());
+            entry.put("ultimas_lecturas", queries.pondReadings(pond.id(), since, null, 6));
+            entry.put("lotes_activos", catalog.listBatches(pond.id(), "activo").stream()
+                    .map(batch -> queries.batchSummary(batch.id())).toList());
+            ponds.add(entry);
+        }
+        farm.put("estanques", ponds);
+        farm.put("alertas_pendientes", queries.listAlerts(true, null, 20));
+        farm.put("parametros_sistema_experto", parameters.response());
+        return farm;
     }
 
     // ---------- The event handler ----------

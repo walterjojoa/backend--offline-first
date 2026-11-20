@@ -2,6 +2,17 @@
 
 ## Sin publicar
 
+### Nuevo: asistente de la finca (IA nivel 3, Claude Opus 5.5)
+- `POST /api/asistente` con `{"pregunta": "...", "historial": [{"rol": "usuario|asistente", "texto": "..."}]}`
+  → `{"respuesta": "...", "modelo": "claude-opus-5-5"}`. Responde preguntas, arma informes y dice cuánto
+  dar de comer.
+- El backend arma el estado de la finca (estanques activos con sus últimas lecturas, lotes activos con su
+  resumen y la ración diaria del sistema experto, alertas pendientes y parámetros) y lo manda al servicio
+  de IA (`POST /asistente`), que llama a Claude. La app sigue sin hablar con la IA.
+- Espera hasta 150 s. Si la IA explica el error (sin clave de Anthropic, sin saldo) esa frase llega a la app.
+- `AssistantTest`: 5 pruebas contra un servicio de IA falso. `WaterForecastTest` ya no confunde las
+  llamadas del análisis de fondo con las del pronóstico (fallaba al correrla sola).
+
 ### Nuevo: pronóstico de la temperatura del agua (IA)
 - `GET /api/estanques/{id}/pronostico-temperatura?dias=2` (1 a 7 días): mínima, máxima y promedio
   esperados por día. Lo calcula el servicio de IA (repo MODELO-IA-offline-first) con las lecturas de

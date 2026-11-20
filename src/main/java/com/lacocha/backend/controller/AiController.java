@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -14,10 +15,13 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.lacocha.backend.dto.Ai.FindingResponse;
 import com.lacocha.backend.dto.Ai.ProjectionJson;
+import com.lacocha.backend.dto.Assistant.Answer;
+import com.lacocha.backend.dto.Assistant.Question;
 import com.lacocha.backend.service.PisciculturaFacade;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 
 /**
  * What the AI service found, and what it expects.
@@ -40,6 +44,12 @@ public class AiController {
     @Operation(summary = "Si hay servicio de IA configurado y respondiendo")
     public Disponible available() {
         return new Disponible(facade.aiAvailable());
+    }
+
+    @PostMapping("/asistente")
+    @Operation(summary = "Preguntarle al asistente de la finca (Claude): informes, alimentación, agua y lotes")
+    public Answer ask(@Valid @RequestBody Question question) {
+        return facade.askAssistant(question);
     }
 
     /** Its own tiny record so the answer is an object and not a bare boolean in the body. */
