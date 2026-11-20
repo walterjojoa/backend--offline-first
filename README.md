@@ -53,19 +53,48 @@ en esas costuras, no de adorno. Hoy ese método tiene 24 líneas.
 
 Al conectar el servicio de IA aparecieron dos costuras más del mismo tipo, así que **Bridge y
 Decorator aparecen dos veces cada uno**, en problemas distintos y con el mismo criterio. Y entró un
-sexto patrón, **Proxy**, por una razón que solo existe en este despliegue.
+sexto patrón, **Proxy**, por una razón que solo existe en este despliegue. Con el manejador de eventos
+(SSE) y el acceso a datos quedan **ocho**: se suman **Observer** y **Repository**.
 
 | Patrón | Dónde | Qué problema resuelve |
 |---|---|---|
 | **Facade** | `service/PisciculturaFacade.java` | Los cinco controladores inyectaban cinco servicios distintos. Ahora inyectan uno. Un controlador solo tiene que saber su ruta, su JSON y qué caso de uso llamar; en qué servicio vive ese caso de uso, y si mañana se mueve, no es asunto suyo. |
 | **Adapter** | `service/PushJsonAdapter.java` | El celular y el ESP32 suben JSON sin tipo: una trama del contador llega como un objeto cuyo campo `tipo` es la única pista de qué es. Este es el único lugar que la convierte en un record ya validado, y que nombra el campo que falló como lo nombra el JSON y no como lo nombra Java. Es el gemelo en el servidor del `ArduinoSerialAdapter` de la app. |
 | **Factory Method** | `service/EventIngestors.java` | Antes había un `instanceof WaterReadingInput` enterrado en el push para decidir quién dispara alertas. Ahora cada subclase de `Factory` responde por un `tipo` del protocolo y decide quién lo atiende. Aceptar un evento nuevo es agregar una subclase y registrarla. Es además la **única** lista de las etiquetas del protocolo: `Events.TYPES` desapareció. |
-| **Bridge** | `service/EventStore.java` + `JpaEventStore.java`, y `service/Analyzer.java` + `AiAnalysis.java` | `EventIngestion` tiene las reglas de qué se acepta, qué es duplicado y qué se rechaza, y sostiene un `EventStore` sin saber nunca cuál es. Nunca ve un `EntityManager`. Eso es lo que permite probar esas reglas sin base de datos (ver *Pruebas automáticas*). |
+| **Bridge** | `service/EventStore.java` + `JpaEventStore.java`, y `service/Analyzer.java` + `AiAnalysis.java` | `EventIngestion` tiene las reglas de qué se acepta, qué es duplicado y qué se rechaza, y sostiene un `EventStore` sin saber nunca cuál es. Nunca ve un `EntityManager`. Eso es lo que permite probar esas reglas sin base de datos (ver *Pruebas automáticas*). El segundo puente es el de la IA: `AiAnalysis` decide qué analizar, cuándo y qué hacer con la respuesta, y llega al servicio Python a través de `Analyzer` (`RestAnalyzer`) sin ver nunca un cliente HTTP. |
 | **Proxy** | `service/CachingAnalyzer.java` | El servicio de IA duerme en el plan gratuito de Render y tarda cerca de un minuto en despertar, así que cada llamada evitada es un minuto que el cuidador no espera. Dos preguntas se hacen mucho más seguido de lo que cambian sus respuestas: `available()` corre antes de **cada** sincronización y en cada pantalla que muestra hallazgos, y la proyección se recalcula cada vez que alguien abre un lote. El Proxy responde por el servicio cuando ya sabe la respuesta. **No** guarda el análisis del agua: esas tres rutas se llaman justo después de que entraron lecturas nuevas, o sea justo después de que la respuesta cambió. |
-| **Decorator** | `service/EventStoreDecorators.java` + `service/AnalyzerDecorators.java` | Dos capacidades transversales que se envuelven desde fuera y se apilan. `SourceTally` cuenta lo guardado por `origen` y lo deja en el log (`events from cel-cuidador-1: contador=120, manual=3`): la tesis compara el contador contra el conteo a mano, y eso lo responde sin una consulta. `Trace` escribe una línea por evento y **solo se envuelve si su nivel está en DEBUG**, porque un push trae hasta 500. |
+| **Decorator** | `service/EventStoreDecorators.java` + `service/AnalyzerDecorators.java` | Dos capacidades transversales que se envuelven desde fuera y se apilan. `SourceTally` cuenta lo guardado por `origen` y lo deja en el log (`events from cel-cuidador-1: contador=120, manual=3`): la tesis compara el contador contra el conteo a mano, y eso lo responde sin una consulta. `Trace` escribe una línea por evento y **solo se envuelve si su nivel está en DEBUG**, porque un push trae hasta 500. Del lado de la IA, `AnalyzerDecorators.Resilient` es un cortacircuitos (deja de llamar si el servicio viene fallando) y `AnalyzerDecorators.Trace` registra cada llamada. |
+| **Observer** | `service/Changed.java` + `AiTrigger.java`, y `service/FindingPublisher.java` + `EventStream.java` | `SyncService` publica un evento `Changed` («estos estanques y lotes recibieron datos») y no sabe quién lo escucha. Lo escuchan dos observadores, los dos **después del commit** y sin conocerse: `EventStream` avisa de inmediato por SSE a cada pantalla suscrita (`GET /api/eventos/stream`), y por eso el contador sube en vivo aunque los conteos lleguen del ESP32 por `/api/webhook/{fuente}`; `AiTrigger` lanza el análisis de IA en otro hilo, para que el celular no espere a un servicio dormido. Cuando la IA encuentra algo, `AiTrigger` lo entrega a un `FindingPublisher`, cuya implementación real también es `EventStream`, y el hallazgo aparece solo en la pantalla. `FindingPublisher.silent()` deja todo funcionando sin avisos en vivo. |
+| **Repository** | `repository/*.java` (16 interfaces) | Una interfaz de Spring Data JPA por entidad (`PondRepository`, `BatchRepository`, `WaterReadingRepository`…). Los servicios piden datos por nombre de consulta y no escriben SQL; los controladores nunca los ven, porque todo pasa por la fachada. |
 
 Los decoradores se construyen por cada push, no una vez: un conteo por `origen` que sumara dos pushes
 distintos no diría nada.
+
+#### Recorrido de un push: dónde actúa cada patrón
+
+Lo que pasa cuando el celular sube lo que guardó sin señal (`POST /api/sync/push`), en orden:
+
+```
+SyncController                         solo conoce su ruta y la fachada
+  └─ PisciculturaFacade.push()         FACADE: la única puerta
+      └─ SyncService.push()            fusiona estanques y lotes
+          ├─ PushJsonAdapter.read()    ADAPTER: JSON sin tipo → record validado
+          └─ EventIngestion.ingest()   BRIDGE (abstracción): acepta, duplica o rechaza
+              ├─ EventIngestors        FACTORY METHOD: un ingestor por "tipo" de evento
+              └─ SourceTally(Trace(    DECORATOR: cuenta por origen y traza
+                   JpaEventStore))     BRIDGE (implementación) → REPOSITORY / JPA
+          └─ publishEvent(Changed)     OBSERVER: "hay datos nuevos"
+                                        ── commit, respuesta al celular ──
+EventStream.onChanged()                OBSERVER: avisa ya por SSE (el contador sube en vivo)
+AiTrigger.onChanged()                  OBSERVER: escucha después del commit, en otro hilo
+  └─ AiAnalysis                        BRIDGE (abstracción): qué analizar
+      └─ Trace(CachingAnalyzer(        DECORATOR + PROXY: traza y responde lo ya sabido
+           Resilient(RestAnalyzer)))   DECORATOR (cortacircuitos) → servicio de IA
+  └─ FindingPublisher.publish()        OBSERVER → EventStream → SSE a las pantallas
+```
+
+Las capas del Analyzer se arman en `config/AiConfig.java` y las del EventStore en
+`EventIngestion.ingest()`. Ninguna clase de arriba sabe qué envoltorios tiene debajo.
 
 #### Proxy y Decorator, que se parecen y no son lo mismo
 
